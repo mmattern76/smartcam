@@ -15,6 +15,9 @@ SET ( STAGEDIR ${OETMP}/sysroots/armv7a-angstrom-linux-gnueabi/usr )
 SET ( CMAKE_C_COMPILER ${TOOLDIR}/arm-angstrom-linux-gnueabi-gcc )
 SET ( CMAKE_CXX_COMPILER ${TOOLDIR}/arm-angstrom-linux-gnueabi-g++ )
 SET ( CMAKE_C_FLAGS -"Wall" )
+
+SET ( CMAKE_FIND_ROOT_PATH ${STAGEDIR})
+
 SET ( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
 SET ( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 
@@ -34,6 +37,7 @@ SET ( DOC_OUTPUT_PATH ${CMAKE_BINARY_DIR}/../doc )
 OPTION( BUILD_HELLO_WORLD "Build hello world program" ON )
 OPTION( BUILD_HELLO_LIB "Build hello world library" ON )
 OPTION( BUILD_BT_TEST "Build bluetooth test program" ON )
+OPTION( BUILD_CV_TEST "Build OpenCV test program" ON )
 
 
 IF(BUILD_HELLO_WORLD)
@@ -49,4 +53,13 @@ IF(BUILD_BT_TEST)
 	ADD_SUBDIRECTORY (bt-test)
 	ADD_SUBDIRECTORY (rfcomm-client)
 ENDIF()
+
+IF(BUILD_CV_TEST)
+	ADD_SUBDIRECTORY (cv-test)
+ENDIF()
+
+ADD_CUSTOM_TARGET ( deploy
+				COMMAND echo "Uploading binary files on Overo" 
+				COMMAND ls -l
+				WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../bin )
 

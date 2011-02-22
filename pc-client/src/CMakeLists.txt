@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-PROJECT (Server) 
+PROJECT (PC-Client) 
 
 LINK_DIRECTORIES ( ${PROJECT_SOURCE_DIR}/../lib )
 INCLUDE_DIRECTORIES ( ${PROJECT_SOURCE_DIR}/../include )
