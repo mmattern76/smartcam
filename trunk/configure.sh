@@ -8,3 +8,12 @@ mkdir build
 
 cd build
 cmake -G "Eclipse CDT4 - Unix Makefiles"  ../src/
+
+cd ../pc-client
+
+mkdir bin
+mkdir lib
+mkdir build
+
+cd build
+cmake -G "Eclipse CDT4 - Unix Makefiles" -D CMAKE_BUILD_TYPE=Debug ../src/
