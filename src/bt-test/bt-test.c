@@ -1,112 +1,98 @@
 #include <stdio.h>
-#include <errno.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
-#include <getopt.h>
-#include <sys/param.h>
-#include <sys/ioctl.h>
+#include <unistd.h>
 #include <sys/socket.h>
-
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
+#include <bluetooth/rfcomm.h>
 
+#define MAX_RISP 255
+#define ADDR_LEN 19
 
-/* Unofficial value, might still change */
-#define LE_LINK		0x03
+int getDevices(char dev_addr[MAX_RISP][19], int max_rsp){
 
-#define for_each_opt(opt, long, short) while ((opt=getopt_long(argc, argv, short ? short:"+", long, NULL)) != -1)
+	inquiry_info *ii;
+	int i, dev_id, sock, len, flags, num_rsp;
+	char addr[ADDR_LEN] = { 0 };
+	char name[248] = { 0 };
 
+	dev_id = hci_get_route(NULL);
+	sock = hci_open_dev( dev_id );
+	if (dev_id < 0 || sock < 0) {
+		perror("opening socket");
+		return -1;
+	}
 
-/* Inquiry */
+	len  = 8;
+	max_rsp = 255;
+	flags = IREQ_CACHE_FLUSH;
+	ii = (inquiry_info*)malloc(max_rsp * sizeof(inquiry_info));
 
-static struct option inq_options[] = {
-	{ "help",	0, 0, 'h' },
-	{ "length",	1, 0, 'l' },
-	{ "numrsp",	1, 0, 'n' },
-	{ "iac",	1, 0, 'i' },
-	{ "flush",	0, 0, 'f' },
-	{ 0, 0, 0, 0 }
-};
+	printf("Scanning ...\n");
 
-static const char *inq_help =
-	"Usage:\n"
-	"\tinq [--length=N] maximum inquiry duration in 1.28 s units\n"
-	"\t    [--numrsp=N] specify maximum number of inquiry responses\n"
-	"\t    [--iac=lap]  specify the inquiry access code\n"
-	"\t    [--flush]    flush the inquiry cache\n";
+	num_rsp = hci_inquiry(dev_id, len, max_rsp, NULL, &ii, flags);
+	if( num_rsp < 0 ) perror("hci_inquiry");
+
+	printf("Select a device: \n");
+	for (i = 0; i < num_rsp; i++) {
+		ba2str(&(ii+i)->bdaddr, dev_addr[i]);
+		memset(name, 0, sizeof(name));
+		if (hci_read_remote_name(sock, &(ii+i)->bdaddr, sizeof(addr),
+				name, 0) < 0)
+			strcpy(name, "[unknown]");
+		printf("\t%d %s\t%s\n", i+1, dev_addr[i], name);
+	}
+
+	free(ii);
+	close( sock );
+	return num_rsp;
+}
 
 int main(int argc, char **argv)
 {
+	struct sockaddr_rc addr = { 0 };
+    int s, status, num_rsp, dev_num, returnInt;
+    char dev[4];
+    char dev_addr[MAX_RISP][ADDR_LEN];
 
-	int dev_id = 0;
-	inquiry_info *info = NULL;
-	uint8_t lap[3] = { 0x33, 0x8b, 0x9e };
-	int num_rsp, length, flags;
-	char addr[18];
-	int i, l, opt;
+    num_rsp = getDevices(dev_addr, MAX_RISP);
 
-	length  = 8;	/* ~10 seconds */
-	num_rsp = 0;
-	flags   = 0;
+    if(num_rsp < 0){
+    	exit(1);
+    }
 
-	for_each_opt(opt, inq_options, NULL) {
-		switch (opt) {
-		case 'l':
-			length = atoi(optarg);
-			break;
+    printf("Choice a number between 1 and %d: ", num_rsp);
+    gets(dev);
+    dev_num = atoi(dev) - 1;
 
-		case 'n':
-			num_rsp = atoi(optarg);
-			break;
+    // set the connection parameters (who to connect to)
+    addr.rc_family = AF_BLUETOOTH;
+    addr.rc_channel = (uint8_t) 1;
 
-		case 'i':
-			l = strtoul(optarg, 0, 16);
-			if (!strcasecmp(optarg, "giac")) {
-				l = 0x9e8b33;
-			} else if (!strcasecmp(optarg, "liac")) {
-				l = 0x9e8b00;
-			} if (l < 0x9e8b00 || l > 0x9e8b3f) {
-				printf("Invalid access code 0x%x\n", l);
-				exit(1);
-			}
-			lap[0] = (l & 0xff);
-			lap[1] = (l >> 8) & 0xff;
-			lap[2] = (l >> 16) & 0xff;
-			break;
+    printf("Selected %d\n", dev_num + 1);
+    printf("Selected address: %s\n", dev_addr[dev_num]);
+    str2ba(dev_addr[dev_num], &addr.rc_bdaddr);
 
-		case 'f':
-			flags |= IREQ_CACHE_FLUSH;
-			break;
+    // allocate a socket
+    s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 
-		default:
-			printf("%s", inq_help);
-			return 1;
-		}
-	}
+    // connect to server
+    status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
 
-	printf("Inquiring ...\n");
+    // send a message
+    if( status == 0 ) {
+        status = write(s, "hello!", 6);
+    }
 
-	num_rsp = hci_inquiry(dev_id, length, num_rsp, lap, &info, flags);
-	if (num_rsp < 0) {
-		perror("Inquiry failed.");
-		exit(1);
-	}
+    if( status < 0 ) perror("uh oh");
 
-	for (i = 0; i < num_rsp; i++) {
-		ba2str(&(info+i)->bdaddr, addr);
-		printf("\t%s\tclock offset: 0x%4.4x\tclass: 0x%2.2x%2.2x%2.2x\n",
-			addr, btohs((info+i)->clock_offset),
-			(info+i)->dev_class[2],
-			(info+i)->dev_class[1],
-			(info+i)->dev_class[0]);
-	}
+    status = read(s, &returnInt, sizeof(int));
+    if( status < 0 ) perror("uh oh");
 
-	bt_free(info);
-	
-	return 1;
+    printf("%d\n", btohl(returnInt));
+
+    close(s);
+    return 0;
 }
 
