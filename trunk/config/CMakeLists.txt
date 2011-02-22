@@ -47,5 +47,6 @@ ENDIF()
 
 IF(BUILD_BT_TEST)
 	ADD_SUBDIRECTORY (bt-test)
+	ADD_SUBDIRECTORY (rfcomm-client)
 ENDIF()
 

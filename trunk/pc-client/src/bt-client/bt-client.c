@@ -1,112 +1,53 @@
 #include <stdio.h>
-#include <errno.h>
-#include <ctype.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <getopt.h>
-#include <sys/param.h>
-#include <sys/ioctl.h>
 #include <sys/socket.h>
-
 #include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/hci_lib.h>
+#include <bluetooth/rfcomm.h>
 
-
-/* Unofficial value, might still change */
-#define LE_LINK		0x03
-
-#define for_each_opt(opt, long, short) while ((opt=getopt_long(argc, argv, short ? short:"+", long, NULL)) != -1)
-
-
-/* Inquiry */
-
-static struct option inq_options[] = {
-	{ "help",	0, 0, 'h' },
-	{ "length",	1, 0, 'l' },
-	{ "numrsp",	1, 0, 'n' },
-	{ "iac",	1, 0, 'i' },
-	{ "flush",	0, 0, 'f' },
-	{ 0, 0, 0, 0 }
-};
-
-static const char *inq_help =
-	"Usage:\n"
-	"\tinq [--length=N] maximum inquiry duration in 1.28 s units\n"
-	"\t    [--numrsp=N] specify maximum number of inquiry responses\n"
-	"\t    [--iac=lap]  specify the inquiry access code\n"
-	"\t    [--flush]    flush the inquiry cache\n";
+#define true 1
 
 int main(int argc, char **argv)
 {
+    struct sockaddr_rc loc_addr = { 0 }, rem_addr = { 0 };
+    char buf[1024] = { 0 };
+    int s, client, bytes_read;
+    socklen_t opt = sizeof(rem_addr);
+    int result = 5;
 
-	int dev_id = 0;
-	inquiry_info *info = NULL;
-	uint8_t lap[3] = { 0x33, 0x8b, 0x9e };
-	int num_rsp, length, flags;
-	char addr[18];
-	int i, l, opt;
+    // allocate socket
+    s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 
-	length  = 8;	/* ~10 seconds */
-	num_rsp = 0;
-	flags   = 0;
+    // bind socket to port 1 of the first available
+    // local bluetooth adapter
+    loc_addr.rc_family = AF_BLUETOOTH;
+    loc_addr.rc_bdaddr = *BDADDR_ANY;
+    loc_addr.rc_channel = (uint8_t) 1;
+    bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
 
-	for_each_opt(opt, inq_options, NULL) {
-		switch (opt) {
-		case 'l':
-			length = atoi(optarg);
-			break;
+    // put socket into listening mode
+    listen(s, 1);
 
-		case 'n':
-			num_rsp = atoi(optarg);
-			break;
+    printf("Accepting connections ...\n");
 
-		case 'i':
-			l = strtoul(optarg, 0, 16);
-			if (!strcasecmp(optarg, "giac")) {
-				l = 0x9e8b33;
-			} else if (!strcasecmp(optarg, "liac")) {
-				l = 0x9e8b00;
-			} if (l < 0x9e8b00 || l > 0x9e8b3f) {
-				printf("Invalid access code 0x%x\n", l);
-				exit(1);
-			}
-			lap[0] = (l & 0xff);
-			lap[1] = (l >> 8) & 0xff;
-			lap[2] = (l >> 16) & 0xff;
-			break;
+    while(true){
+    	// accept one connection
+    	client = accept(s, (struct sockaddr *)&rem_addr, &opt);
 
-		case 'f':
-			flags |= IREQ_CACHE_FLUSH;
-			break;
+    	ba2str( &rem_addr.rc_bdaddr, buf );
+    	fprintf(stderr, "accepted connection from %s\n", buf);
+    	memset(buf, 0, sizeof(buf));
 
-		default:
-			printf("%s", inq_help);
-			return 1;
-		}
-	}
+    	// read data from the client
+    	bytes_read = read(client, buf, sizeof(buf));
+    	if( bytes_read > 0 ) {
+    		printf("received [%s]\n", buf);
+    	}
 
-	printf("Inquiring ...\n");
+    	write(client, &htobl(result), sizeof(int));
 
-	num_rsp = hci_inquiry(dev_id, length, num_rsp, lap, &info, flags);
-	if (num_rsp < 0) {
-		perror("Inquiry failed.");
-		exit(1);
-	}
-
-	for (i = 0; i < num_rsp; i++) {
-		ba2str(&(info+i)->bdaddr, addr);
-		printf("\t%s\tclock offset: 0x%4.4x\tclass: 0x%2.2x%2.2x%2.2x\n",
-			addr, btohs((info+i)->clock_offset),
-			(info+i)->dev_class[2],
-			(info+i)->dev_class[1],
-			(info+i)->dev_class[0]);
-	}
-
-	bt_free(info);
-	
-	return 1;
+    	// close connection
+    	close(client);
+    }
+    close(s);
+    return 0;
 }
-

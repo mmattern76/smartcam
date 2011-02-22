@@ -1,0 +1,14 @@
+# lib da installare:
+libbluetooth-dev
+bluez
+
+# collegamento console
+kermit kermit-config
+connect
+
+# per copiare file
+ssh root@22.242.125.115
+scp helloworld root@22.242.125.115:
+
+# rendere visibile la periferica bt
+hciconfig hci0 piscan
