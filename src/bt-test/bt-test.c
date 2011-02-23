@@ -6,6 +6,9 @@
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
 #include <bluetooth/rfcomm.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define MAX_RISP 255
 #define ADDR_LEN 19
@@ -52,8 +55,8 @@ int getDevices(char dev_addr[MAX_RISP][19], int max_rsp){
 int main(int argc, char **argv)
 {
 	struct sockaddr_rc addr = { 0 };
-    int s, status, num_rsp, dev_num, returnInt;
-    char dev[4];
+    int s, status, num_rsp, dev_num, returnInt, img_fd, img_len, i, temp;
+    char dev[4], buf[1024];
     char dev_addr[MAX_RISP][ADDR_LEN];
 
     num_rsp = getDevices(dev_addr, MAX_RISP);
@@ -80,18 +83,23 @@ int main(int argc, char **argv)
     // connect to server
     status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
 
-    // send a message
-    if( status == 0 ) {
-        status = write(s, "hello!", 6);
+    img_fd = open("../data/images/lena.bmp-inv.jpeg", O_RDONLY);
+    img_len = 0;
+
+    while((temp = read(img_fd, buf, sizeof(char) * 1024)) > 0){
+    	img_len += temp;
+    }
+    printf("Sending image size: %i\n", img_len);
+    write(s, &htobl(img_len), sizeof(img_len));
+    close(img_fd);
+
+    printf("Sending image ...\n");
+    img_fd = open("../data/images/lena.bmp-inv.jpeg", O_RDONLY);
+    while((img_len = read(img_fd, buf, sizeof(char) * 1024)) > 0){
+    	write(s, buf, sizeof(char) * img_len);
     }
 
-    if( status < 0 ) perror("uh oh");
-
-    status = read(s, &returnInt, sizeof(int));
-    if( status < 0 ) perror("uh oh");
-
-    printf("%d\n", btohl(returnInt));
-
+    close(img_fd);
     close(s);
     return 0;
 }

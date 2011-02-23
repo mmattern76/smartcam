@@ -3,6 +3,10 @@
 #include <sys/socket.h>
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/rfcomm.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 #define true 1
 
@@ -10,7 +14,7 @@ int main(int argc, char **argv)
 {
     struct sockaddr_rc loc_addr = { 0 }, rem_addr = { 0 };
     char buf[1024] = { 0 };
-    int s, client, bytes_read;
+    int s, client, bytes_read, img_fd, img_len, byte_read, temp;
     socklen_t opt = sizeof(rem_addr);
     int result = 5;
 
@@ -37,13 +41,22 @@ int main(int argc, char **argv)
     	fprintf(stderr, "accepted connection from %s\n", buf);
     	memset(buf, 0, sizeof(buf));
 
-    	// read data from the client
-    	bytes_read = read(client, buf, sizeof(buf));
-    	if( bytes_read > 0 ) {
-    		printf("received [%s]\n", buf);
-    	}
+    	img_fd = open("../../data/images/lena.jpeg", O_CREAT | O_WRONLY, S_IRWXU);
 
-    	write(client, &htobl(result), sizeof(int));
+    	// read image lenght
+    	read(client, &img_len, sizeof(img_len));
+    	img_len = btohl(img_len);
+    	printf("Received image size: %d\n", img_len);
+
+    	printf("Receiving image ...\n");
+    	byte_read = 0;
+    	while(byte_read < img_len){
+    		temp = read(client, buf, sizeof(char) * 1024);
+    		write(img_fd, buf, temp);
+    		byte_read += temp;
+    	}
+    	printf("Received image.\n");
+    	close(img_fd);
 
     	// close connection
     	close(client);
