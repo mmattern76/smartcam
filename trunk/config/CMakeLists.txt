@@ -60,4 +60,9 @@ ADD_CUSTOM_TARGET ( deploy
 				COMMAND echo "Uploading binary files on Overo" 
 				COMMAND scp -o ConnectTimeout=5 -r bin root@OVERO_IP_MARKER:
 				WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/.. )
+				
+ADD_CUSTOM_TARGET ( send_data
+				COMMAND echo "Uploading data on Overo" 
+				COMMAND scp -o ConnectTimeout=5 -r data root@OVERO_IP_MARKER:
+				WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/.. )
 

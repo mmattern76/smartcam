@@ -41,12 +41,14 @@ int main(int argc, char *argv[]) {
 						* channels + k];
 
 	char newName[100];
-	sprintf(newName, "inv-%s", argv[1]);
+	sprintf(newName, "%s-inv.jpeg", argv[1]);
 
-	cvSaveImage(newName, img, 0); // check if it works
+	printf("Saving new image\n");
+
+	cvSaveImage(newName, img, NULL); // check if it works
 
 	// wait for a key
-	cvWaitKey(0);
+	//cvWaitKey(0);
 
 	// release the image
 	cvReleaseImage(&img);
