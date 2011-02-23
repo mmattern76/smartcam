@@ -1,16 +1,14 @@
-cmake_minimum_required (VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 PROJECT (Smartcam) 
 
 # setup toolchain for cross compiling
 SET ( CMAKE_SYSTEM_NAME Linux )
 				
-SET ( OETMP OVEROTOP_MARK/tmp )
-
+#SET ( OETMP OVEROTOP_MARK/tmp )
 #SET ( OETMP $ENV{OVEROTOP}/tmp )
 
-
-SET ( TOOLDIR ${OETMP}/sysroots/i686-linux/usr/armv7a/bin )
-SET ( STAGEDIR ${OETMP}/sysroots/armv7a-angstrom-linux-gnueabi/usr )
+SET ( TOOLDIR OVERO_TOOL_MARK )
+SET ( STAGEDIR OVERO_STAGE_MARK  )
 
 SET ( CMAKE_C_COMPILER ${TOOLDIR}/arm-angstrom-linux-gnueabi-gcc )
 SET ( CMAKE_CXX_COMPILER ${TOOLDIR}/arm-angstrom-linux-gnueabi-g++ )
@@ -60,6 +58,6 @@ ENDIF()
 
 ADD_CUSTOM_TARGET ( deploy
 				COMMAND echo "Uploading binary files on Overo" 
-				COMMAND ls -l
-				WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../bin )
+				COMMAND scp -o ConnectTimeout=5 -r bin root@OVERO_IP_MARKER:
+				WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/.. )
 
