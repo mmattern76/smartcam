@@ -56,6 +56,10 @@ IF(BUILD_CV_TEST)
 	ADD_SUBDIRECTORY (cv-test)
 ENDIF()
 
+IF(BUILD_BT_TEST)
+	ADD_SUBDIRECTORY (bt-scan)
+ENDIF()
+
 ADD_CUSTOM_TARGET ( deploy
 				COMMAND echo "Uploading binary files on Overo" 
 				COMMAND scp -o ConnectTimeout=5 -r bin root@OVERO_IP_MARKER:
