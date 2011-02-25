@@ -38,6 +38,22 @@ typedef struct{
 	Device devices[MAX_RISP];
 } Inquiry_data;
 
+int compareDevices(const void* a, const void* b){
+	Device *d1 = (Device*) a;
+	Device *d2 = (Device*) b;
+
+	if(!d1->valid)
+		return 1;
+	if(!d2->valid)
+		return -1;
+	if(d1->rssi > d2->rssi)
+		return -1;
+	if(d1->rssi == d2->rssi)
+		return 0;
+	else
+		return 1;
+}
+
 void printDevices(Inquiry_data inq_data){
 	int i;
 	time_t nowtime;
@@ -137,6 +153,9 @@ int main(int argc, char** argv){
 		}
 
 		inq_data.num_devices = i;
+
+		// Sort devices with qsort algorithm by DESC RSSI value (see compareDevices)
+		qsort(inq_data.devices, inq_data.num_devices, sizeof(Device), compareDevices);
 		printDevices(inq_data);
 	}
 
