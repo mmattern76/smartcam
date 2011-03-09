@@ -4,39 +4,10 @@
  *  Created on: Feb 25, 2011
  *      Author: luca
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/hci_lib.h>
-#include <bluetooth/rfcomm.h>
-#include <sys/ioctl.h>
-#include <sys/param.h>
-#include <sys/time.h>
-#include <time.h>
+#include "bt-scan-rssi.h"
 
-#define true 1
-#define false 0
-#define MAX_RISP 255
-#define ADDR_LEN 19
-#define NAME_LEN 248
-#define GUMSTIX_NAME_LEN 11
-
-typedef struct{
-	char name[NAME_LEN];
-	char bt_addr[ADDR_LEN];
-	int valid;
-	int8_t rssi;
-} Device;
-
-typedef struct{
-	struct timeval timestamp;
-	char id_gumstix[GUMSTIX_NAME_LEN];
-	int num_devices;
-	Device devices[MAX_RISP];
-} Inquiry_data;
+Inquiry_data inq_data;
+Configuration config;
 
 int compareDevices(const void* a, const void* b){
 	Device *d1 = (Device*) a;
@@ -64,16 +35,14 @@ void printDevices(Inquiry_data inq_data){
 	nowtm = localtime(&nowtime);
 	strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
 
-	printf("Gumstix: %s, Timestamp: %s, Devices found: %d\n", inq_data.id_gumstix, tmbuf, inq_data.num_devices);
+	printf("Gumstix: %s, Timestamp: %s, Devices found: %d\n", config.id_gumstix, tmbuf, inq_data.num_devices);
 	for(i = 0; i < inq_data.num_devices; i++){
 		printf("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
 				inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
 	}
 }
 
-int main(int argc, char** argv){
-
-	Inquiry_data inq_data;
+void * executeInquire(void * args){
 
 	inquiry_info *ii;
 	int i, dev_id, sock, len, flags, num_rsp;
@@ -90,7 +59,7 @@ int main(int argc, char** argv){
 		return -1;
 	}
 
-	len  = 8;
+	len  = config.scan_lenght;
 	flags = IREQ_CACHE_FLUSH;
 
 	ii = (inquiry_info*)malloc(MAX_RISP * sizeof(inquiry_info));
@@ -100,8 +69,6 @@ int main(int argc, char** argv){
 		perror("Can't allocate memory");
 		exit(1);
 	}
-
-	strcpy(inq_data.id_gumstix, "Gumstix");
 
 	while(true){
 

@@ -12,7 +12,7 @@ SET ( STAGEDIR OVERO_STAGE_MARK  )
 
 SET ( CMAKE_C_COMPILER ${TOOLDIR}/arm-angstrom-linux-gnueabi-gcc )
 SET ( CMAKE_CXX_COMPILER ${TOOLDIR}/arm-angstrom-linux-gnueabi-g++ )
-SET ( CMAKE_C_FLAGS -"Wall" )
+SET ( CMAKE_C_FLAGS "-Wall -D_REENTRANT" )
 
 SET ( CMAKE_FIND_ROOT_PATH ${STAGEDIR})
 
