@@ -1,2 +1,2 @@
-ADD_EXECUTABLE (bt-scan-rssi bt-scan-rssi.c)
-TARGET_LINK_LIBRARIES (bt-scan-rssi bluetooth) 
+ADD_EXECUTABLE (gumstix bt-scan-rssi.c gumstix.c commands.c)
+TARGET_LINK_LIBRARIES (gumstix bluetooth pthread) 
