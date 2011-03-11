@@ -12,6 +12,8 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <time.h>
+#include <ctype.h>
+
 
 #define true 1
 #define false 0
@@ -19,6 +21,16 @@
 #define ADDR_LEN 19
 #define NAME_LEN 248
 #define GUMSTIX_NAME_LEN 11
+
+
+/**
+ * La struttura di configurazione la metterei da qualche altra parte
+ * visto che i parametri sono usati anche per fare altre cose.
+ *
+ * Altri parametri che potrebbero essere aggiunti:
+ * - scan_interval: per non ripetere le scansioni una di seguito all'altra in continuo
+ * - auto_send: la gumstix invia automaticamente i risultati dell'ultima scansione (può creare problemi)
+ */
 
 typedef struct{
 	char id_gumstix[GUMSTIX_NAME_LEN];

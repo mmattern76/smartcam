@@ -10,6 +10,12 @@
 
 extern Configuration config;
 
+/*
+ * Questo file andrebbe riscritto in modo da renderlo più generale
+ * e poterlo riutilizzare direttamente anche nel server visto che le
+ * operazioni sono simmetriche
+ */
+
 // Socket variables
 struct hostent *host;
 struct sockaddr_in clientaddr, servaddr_console, servaddr_service;
@@ -51,6 +57,7 @@ int bindSocketUDP(){
 
 }
 
+
 int sendCommand(int id_command, char* param){
 
 	Command command;
@@ -63,7 +70,7 @@ int sendCommand(int id_command, char* param){
 
 	if (sendto(sd, &command, sizeof(command), 0, (struct sockaddr *)&servaddr_service, sizeof(servaddr_service))<0)
 	{
-		perror("scrittura socket");
+		perror("UDP socket error: sendCommand()");
 		return -1;
 	}
 
@@ -79,9 +86,46 @@ Command receiveCommand(){
 
 	if (recvfrom(sd, &command, sizeof(command), 0, NULL, NULL)<0)
 	{
-		perror("scrittura socket");
+		perror("UDP socket error: receiveCommand()");
 		command.id_command = ERROR;
 	}
 
 	return command;
 }
+
+int sendInquiryData(Inquiry_data inq){
+
+	if(sd < 0)
+		bindSocketUDP();
+
+	/**
+	 * Qui ci vuole sicuramente un semaforo
+	 * Se spedisco i dati mentre inquiry_thread sta modificando la struttura
+	 * ho dei dati non consistenti
+	 */
+
+	if (sendto(sd, &inq, sizeof(inq), 0, (struct sockaddr *)&servaddr_console, sizeof(servaddr_console))<0)
+	{
+		perror("UDP socket error: sendInquiryData()");
+		return -1;
+	}
+
+	return 0;
+}
+
+Inquiry_data receiveInquiryData(){
+
+	Inquiry_data inq;
+
+	if(sd < 0)
+		bindSocketUDP();
+
+	if (recvfrom(sd, &inq, sizeof(inq), 0, NULL, NULL)<0)
+	{
+		perror("UDP socket error: receiveInquiryData()");
+		inq.num_devices = 0;
+	}
+
+	return inq;
+}
+
