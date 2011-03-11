@@ -10,7 +10,11 @@ then
 	
 	echo "$OVERO_TOP"
 	
-	echo "# WARNING: This file is dynamically generated. Don't edit!" > src/CMakeLists.txt 
+	echo "# *********************************************" > src/CMakeLists.txt 
+	echo "#" >> src/CMakeLists.txt 
+	echo "# WARNING: This file is dynamically generated. Don't edit!" >> src/CMakeLists.txt 
+	echo "#" >> src/CMakeLists.txt 
+	echo "# *********************************************" >> src/CMakeLists.txt 
 	cat config/CMakeLists.txt >> src/CMakeLists.txt 
 
 	sed -i "s:OVERO_TOOL_MARK:$OVERO_TOOL:g" src/CMakeLists.txt 

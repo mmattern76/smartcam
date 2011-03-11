@@ -5,6 +5,7 @@
  *      Author: luca
  */
 #include "bt-scan-rssi.h"
+#include "commands.h"
 
 Inquiry_data inq_data;
 Configuration config;
@@ -42,7 +43,7 @@ void printDevices(Inquiry_data inq_data){
 	}
 }
 
-void * executeInquire(void * args){
+void* executeInquire(void * args){
 
 	inquiry_info *ii;
 	int i, dev_id, sock, len, flags, num_rsp;
