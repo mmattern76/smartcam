@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include "bt-scan-rssi.h"
 #include "commands.h"
 
@@ -106,9 +107,9 @@ int main(int argc, char** argv) {
 	else
 	{
 		servaddr_console.sin_addr.s_addr=((struct in_addr *)(host->h_addr))->s_addr;
-		servaddr_console.sin_port = htons(63170);
+		servaddr_console.sin_port = htonl(63170);
 		servaddr_service.sin_addr.s_addr=((struct in_addr *)(host->h_addr))->s_addr;
-		servaddr_service.sin_port = htons(63171);
+		servaddr_service.sin_port = htonl(63171);
 	}
 
 	sd = bindSocketUDP(0, 0);

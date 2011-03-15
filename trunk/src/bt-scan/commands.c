@@ -21,7 +21,6 @@ int bindSocketUDP(int localPort, int timeoutSeconds){
 	struct timeval timeout;
 	int sd;
 
-
 	memset((char *)&localaddr, 0, sizeof(struct sockaddr_in));
 	localaddr.sin_family = AF_INET;
 	localaddr.sin_addr.s_addr = INADDR_ANY;
@@ -34,7 +33,7 @@ int bindSocketUDP(int localPort, int timeoutSeconds){
 	/* BIND SOCKET, a una porta scelta dal sistema --------------- */
 	if(bind(sd,(struct sockaddr *) &localaddr, sizeof(localaddr))<0)
 	{perror("bind socket "); exit(1);}
-	printf("Client: bind socket ok, alla porta %i\n", localaddr.sin_port);
+	printf("Bind socket ok, alla porta %i\n", localaddr.sin_port);
 	if(timeoutSeconds > 0)
 		setsockopt (sd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
@@ -62,8 +61,8 @@ int sendCommand(int sd, struct sockaddr_in* destinationaddr, int id_command, cha
 Command receiveCommand(int sd, struct sockaddr_in* sender){
 
 	Command command;
-
-	if (recvfrom(sd, &command, sizeof(command), 0, (struct sockaddr *)sender, sizeof(struct sockaddr_in))<0)
+	socklen_t len = sizeof(struct sockaddr_in);
+	if (recvfrom(sd, &command, sizeof(command), 0, (struct sockaddr *)sender, &len)<0)
 	{
 		perror("UDP socket error: receiveCommand()");
 		command.id_command = ERROR;
@@ -90,8 +89,8 @@ int sendInquiryData(int sd, struct sockaddr_in* destinationaddr, Inquiry_data in
 Inquiry_data receiveInquiryData(int sd, struct sockaddr_in* sender){
 
 	Inquiry_data inq;
-	int len = sizeof(struct sockaddr_in);
-	if (recvfrom(sd, &inq, sizeof(inq), 0, (struct sockaddr *)sender, len)<0)
+	socklen_t len = sizeof(struct sockaddr_in);
+	if (recvfrom(sd, &inq, sizeof(inq), 0, (struct sockaddr *)sender, &len)<0)
 	{
 		perror("UDP socket error: receiveInquiryData()");
 		inq.num_devices = 0;
