@@ -1,6 +1,10 @@
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 #include "bt-scan-rssi.h"
 #include "commands.h"
-#include <pthread.h>
 
 extern Inquiry_data inq_data;
 extern Configuration config;

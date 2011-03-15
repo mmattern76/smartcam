@@ -6,8 +6,10 @@
  */
 
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "commands.h"
-#include "bt-scan-rssi.h"
 
 extern Configuration config;
 extern pthread_mutex_t inquiry_sem;
