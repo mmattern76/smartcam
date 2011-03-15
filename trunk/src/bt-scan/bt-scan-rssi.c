@@ -5,6 +5,19 @@
  *      Author: luca
  */
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/hci_lib.h>
+#include <bluetooth/rfcomm.h>
+#include <sys/ioctl.h>
+#include <sys/param.h>
+#include <sys/time.h>
+#include <time.h>
+#include <ctype.h>
 #include "bt-scan-rssi.h"
 #include "commands.h"
 
