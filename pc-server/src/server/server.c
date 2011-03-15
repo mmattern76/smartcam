@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 	command = receiveCommand(sService, NULL);
 	if(command.id_command == HELLO)
 		printf("Received Hello form %s\n", command.param);
-	printf("Non received Hello\n");
+	printf("Not received Hello\n");
 	while(true){
 		printf("Waiting Inquiry_data\n");
 		inq_data = receiveInquiryData(sService, NULL);
