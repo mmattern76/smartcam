@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include "commands.h"
 
 extern Configuration config;
@@ -89,8 +90,8 @@ int sendInquiryData(int sd, struct sockaddr_in* destinationaddr, Inquiry_data in
 Inquiry_data receiveInquiryData(int sd, struct sockaddr_in* sender){
 
 	Inquiry_data inq;
-
-	if (recvfrom(sd, &inq, sizeof(inq), 0, (struct sockaddr *)sender, sizeof(struct sockaddr_in))<0)
+	int len = sizeof(struct sockaddr_in);
+	if (recvfrom(sd, &inq, sizeof(inq), 0, (struct sockaddr *)sender, len)<0)
 	{
 		perror("UDP socket error: receiveInquiryData()");
 		inq.num_devices = 0;
