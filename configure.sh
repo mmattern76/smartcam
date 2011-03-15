@@ -38,7 +38,7 @@ then
 
 	echo "Config PC Client ..."
 
-	cd ../pc-client
+	cd ../pc-server
 
 	echo "Cleaning previous build files ..."
 	rm -rf bin

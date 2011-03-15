@@ -4,11 +4,15 @@
  *  Created on: Feb 25, 2011
  *      Author: luca
  */
+#include <pthread.h>
 #include "bt-scan-rssi.h"
 #include "commands.h"
 
 Inquiry_data inq_data;
 Configuration config;
+extern pthread_mutex_t inquiry_sem;
+extern int sd;
+extern struct sockaddr_in servaddr_service;
 
 int compareDevices(const void* a, const void* b){
 	Device *d1 = (Device*) a;
@@ -46,6 +50,7 @@ void printDevices(Inquiry_data inq_data){
 void* executeInquire(void * args){
 
 	inquiry_info *ii;
+	Inquiry_data temp;
 	int i, dev_id, sock, len, flags, num_rsp;
 	char name[NAME_LEN] = { 0 };
 	uint16_t handle;
@@ -57,7 +62,7 @@ void* executeInquire(void * args){
 	sock = hci_open_dev( dev_id );
 	if (dev_id < 0 || sock < 0) {
 		perror("opening socket");
-		return -1;
+		exit(1);
 	}
 
 	len  = config.scan_lenght;
@@ -73,7 +78,7 @@ void* executeInquire(void * args){
 
 	while(true){
 
-		gettimeofday(&inq_data.timestamp, NULL);
+		gettimeofday(&temp.timestamp, NULL);
 
 		memset(ii, 0, MAX_RISP * sizeof(inquiry_info));
 
@@ -82,22 +87,22 @@ void* executeInquire(void * args){
 		num_rsp = hci_inquiry(dev_id, len, MAX_RISP, NULL, &ii, flags);
 		if( num_rsp < 0 ) perror("hci_inquiry");
 
-		for (i = 0; i < num_rsp; i++) {
+		for (i = 0; i < num_rsp && i < MAX_RISP; i++) {
 			//ba2str(&(ii+i)->bdaddr, dev_addr[i]);
-			ba2str(&(ii+i)->bdaddr, inq_data.devices[i].bt_addr);
+			ba2str(&(ii+i)->bdaddr, temp.devices[i].bt_addr);
 
 			memset(name, 0, sizeof(name));
 			if (hci_read_remote_name(sock, &(ii+i)->bdaddr, sizeof(name),
 					name, 0) < 0)
 				strcpy(name, "[unknown]");
-			strcpy(inq_data.devices[i].name, name);
+			strcpy(temp.devices[i].name, name);
 
 			ptype = HCI_DM1 | HCI_DM3 | HCI_DM5 | HCI_DH1 | HCI_DH3 | HCI_DH5;
 
 			if (hci_create_connection(sock, &(ii+i)->bdaddr, htobs(ptype),
 					(ii+i)->clock_offset, 0x01, &handle, 0) < 0){
 				perror("Can't create connection");
-				inq_data.devices[i].valid = false;
+				temp.devices[i].valid = false;
 				continue;
 			}
 			memset(cr, 0, sizeof(*cr) + sizeof(struct hci_conn_info));
@@ -105,26 +110,35 @@ void* executeInquire(void * args){
 			cr->type = ACL_LINK;
 			if (ioctl(sock, HCIGETCONNINFO, (unsigned long) cr) < 0) {
 				perror("Get connection info failed");
-				inq_data.devices[i].valid = false;
+				temp.devices[i].valid = false;
 				continue;
 			}
 
 			if (hci_read_rssi(sock, htobs(cr->conn_info->handle), &rssi, 1000) < 0) {
 				perror("Read RSSI failed");
-				inq_data.devices[i].valid = false;
+				temp.devices[i].valid = false;
 				continue;
 			}
 
 			//printf("\t%d %s\t%s\t%d\n", i+1, addr, name, rssi);
-			inq_data.devices[i].valid = true;
-			inq_data.devices[i].rssi = rssi;
+			temp.devices[i].valid = true;
+			temp.devices[i].rssi = rssi;
 		}
 
-		inq_data.num_devices = i;
+		temp.num_devices = i;
 
 		// Sort devices with qsort algorithm by DESC RSSI value (see compareDevices)
-		qsort(inq_data.devices, inq_data.num_devices, sizeof(Device), compareDevices);
-		printDevices(inq_data);
+		qsort(temp.devices, temp.num_devices, sizeof(Device), compareDevices);
+		printDevices(temp);
+
+		pthread_mutex_lock(&inquiry_sem);
+		inq_data = temp;
+		pthread_mutex_unlock(&inquiry_sem);
+
+		if(config.auto_send && inq_data.num_devices > 0){
+			printf("Sending inquiry data to server ...\n");
+			sendInquiryData(sd, &servaddr_service, inq_data);
+		}
 	}
 
 	free(ii);
