@@ -22,10 +22,12 @@ typedef struct{
 	char param[PARAM_LENGHT];
 } Command;
 
-int sendCommand(int id_command, char* param);
-Command receiveCommand();
+int bindSocketUDP(int localPort, int timeoutSeconds);
 
-int sendInquiryData(Inquiry_data inq);
-Inquiry_data receiveInquiryData();
+int sendCommand(int sd, struct sockaddr_in* destinationaddr, int id_command, char* param);
+Command receiveCommand(int sd, struct sockaddr_in* sender);
+
+int sendInquiryData(int sd, struct sockaddr_in* destinationaddr, Inquiry_data inq);
+Inquiry_data receiveInquiryData(int sd, struct sockaddr_in* sender);
 
 #endif
