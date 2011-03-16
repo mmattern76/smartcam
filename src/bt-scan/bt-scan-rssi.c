@@ -25,7 +25,7 @@ Inquiry_data inq_data;
 Configuration config;
 extern pthread_mutex_t inquiry_sem;
 extern int sd;
-extern struct sockaddr_in servaddr_service;
+extern struct sockaddr_in servaddr_inquiry;
 
 int compareDevices(const void* a, const void* b){
 	Device *d1 = (Device*) a;
@@ -150,7 +150,7 @@ void* executeInquire(void * args){
 
 		if(config.auto_send && inq_data.num_devices > 0){
 			printf("Sending inquiry data to server ...\n");
-			sendInquiryData(sd, &servaddr_service, inq_data);
+			sendInquiryData(sd, &servaddr_inquiry, inq_data);
 		}
 	}
 

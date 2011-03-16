@@ -7,11 +7,14 @@
 #include <sys/time.h>
 #include <time.h>
 #include <commands.h>
+#include <string.h>
 
 #define true 1
+#define MAX_GUMSTIX 10
 
 pthread_mutex_t inquiry_sem;
-int sService;
+int num_gumstix = 0;
+Gumstix gumstix[MAX_GUMSTIX];
 
 //int templateSocketTCP(){
 //
@@ -66,6 +69,80 @@ int sService;
 //	close(s);
 //}
 
+void printGumstix(){
+	int i = 0;
+	char ipaddr[20], port[20];
+	time_t nowtime;
+	struct tm *nowtm;
+	char tmbuf[64];
+
+	for(i; i < num_gumstix; i++){
+		getnameinfo((struct sockaddr*)&gumstix[i].addr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
+		nowtime = gumstix[i].lastseen.tv_sec;
+		nowtm = localtime(&nowtime);
+		strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
+		printf("Gumstix: %s (%s:%s) - lastseen: %s\n", gumstix[i].id_gumstix, ipaddr, port, tmbuf);
+	}
+}
+
+Gumstix* findGumstixById(char* id_gumstix){
+	int i = 0;
+
+	for(i; i < num_gumstix; i++){
+		if(!strcmp(gumstix[i].id_gumstix, id_gumstix)){
+			return &gumstix[i];
+		}
+	}
+
+	return NULL;
+}
+
+Gumstix* findGumstixByAddr(struct sockaddr_in* gumstix_addr){
+	int i = 0;
+
+	for(i; i < num_gumstix; i++){
+		if(gumstix[i].addr.sin_addr.s_addr == gumstix_addr->sin_addr.s_addr){
+			return &gumstix[i];
+		}
+	}
+
+	return NULL;
+}
+
+void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr){
+	int pos;
+	if((pos = getGumstixPosition(gumstix_addr)) >= 0){ // Already known
+		gettimeofday(&gumstix[pos].lastseen, NULL);
+	}else{ // Non already known
+		strcpy(gumstix[num_gumstix].id_gumstix, id_gumstix);
+		gumstix[num_gumstix].addr = gumstix_addr;
+		gettimeofday(&gumstix[num_gumstix].lastseen, NULL);
+		num_gumstix++;
+	}
+	printGumstix();
+}
+
+int getGumstixPosition(struct sockaddr_in* gumstix_addr){
+	int i = 0;
+
+	for(i; i < num_gumstix; i++){
+		if(gumstix[i].addr.sin_addr.s_addr == gumstix_addr->sin_addr.s_addr){
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void updateLastseen(struct sockaddr_in* gumstix_addr){
+	Gumstix* temp;
+	temp = findGumstixByAddr(gumstix_addr);
+	if(temp != NULL){
+		gettimeofday(&temp->lastseen, NULL);
+	}
+	printGumstix();
+}
+
 void printDevices(Inquiry_data inq_data){
 	int i;
 	time_t nowtime;
@@ -83,29 +160,62 @@ void printDevices(Inquiry_data inq_data){
 	}
 }
 
-int main(int argc, char **argv)
-{
-	int sConsole;
+void* serviceThread(void* arg){
+
 	Command command;
+	struct sockaddr_in gumstixaddr;
+	char ipaddr[20], port[20];
+	int sService;
+
+	sService = bindSocketUDP(63171, 0);
+
+	while(true){
+		printf("Waiting command ...\n");
+		command = receiveCommand(sService, &gumstixaddr);
+
+		switch(command.id_command){
+
+		case HELLO:
+			getnameinfo((struct sockaddr*)&gumstixaddr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
+			printf("Received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
+			addGumstix(command.param, gumstixaddr);
+			break;
+		case ALIVE:
+			updateLastseen(&gumstixaddr);
+			break;
+		default:
+			printf("Command not valid ...\n");
+		}
+	}
+}
+
+void* inquiryThread(void* arg){
+
 	Inquiry_data inq_data;
+	Gumstix* temp;
+	int sInquiry;
 	struct sockaddr_in gumstixaddr;
 	char ipaddr[20], port[20];
 
-	sConsole = bindSocketUDP(63170, 0);
-	sService = bindSocketUDP(63171, 0);
-
-	printf("Waiting Hello\n");
-	command = receiveCommand(sService, &gumstixaddr);
-	if(command.id_command == HELLO){
-		getnameinfo((struct sockaddr*)&gumstixaddr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
-		printf("Received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
-	}
+	sInquiry = bindSocketUDP(63172, 0);
 
 	while(true){
-		printf("Waiting Inquiry_data\n");
-		inq_data = receiveInquiryData(sService, NULL);
-		printDevices(inq_data);
+		printf("Waiting Inquiry ...\n");
+		inq_data = receiveInquiryData(sInquiry, &gumstixaddr);
+		temp = findGumstixByAddr(&gumstixaddr);
+		if(temp != NULL){
+			temp->lastInquiry = inq_data;
+		}
 	}
+}
+
+int main(int argc, char **argv)
+{
+	int sConsole;
+
+	Inquiry_data inq_data;
+
+	sConsole = bindSocketUDP(63170, 0);
 
 	return 0;
 }
