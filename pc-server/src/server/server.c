@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <time.h>
-#include "commands.h"
+#include <commands.h>
 
 #define true 1
 
@@ -88,15 +88,19 @@ int main(int argc, char **argv)
 	int sConsole;
 	Command command;
 	Inquiry_data inq_data;
+	struct sockaddr_in gumstixaddr;
+	char ipaddr[20], port[20];
 
 	sConsole = bindSocketUDP(63170, 0);
 	sService = bindSocketUDP(63171, 0);
 
 	printf("Waiting Hello\n");
-	command = receiveCommand(sService, NULL);
-	if(command.id_command == HELLO)
-		printf("Received Hello form %s\n", command.param);
-	printf("Not received Hello\n");
+	command = receiveCommand(sService, &gumstixaddr);
+	if(command.id_command == HELLO){
+		getnameinfo((struct sockaddr*)&gumstixaddr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
+		printf("Received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
+	}
+
 	while(true){
 		printf("Waiting Inquiry_data\n");
 		inq_data = receiveInquiryData(sService, NULL);

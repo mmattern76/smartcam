@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "commands.h"
+#include <commands.h>
 
 extern Configuration config;
 extern pthread_mutex_t inquiry_sem;
@@ -24,7 +24,7 @@ int bindSocketUDP(int localPort, int timeoutSeconds){
 	memset((char *)&localaddr, 0, sizeof(struct sockaddr_in));
 	localaddr.sin_family = AF_INET;
 	localaddr.sin_addr.s_addr = INADDR_ANY;
-	localaddr.sin_port = localPort;
+	localaddr.sin_port = htons(localPort);
 	timeout.tv_sec = timeoutSeconds;
 
 	sd=socket(AF_INET, SOCK_DGRAM, 0);
