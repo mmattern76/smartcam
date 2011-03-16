@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
 	// Initialize semaphore
 	pthread_mutex_init(&inquiry_sem, NULL);
 
-	//pthread_create(&alive_thread, NULL, alive, NULL);
+	pthread_create(&alive_thread, NULL, alive, NULL);
 
 	// Create scanning thread
 	pthread_create(&btscan_thread, NULL, executeInquire, NULL);
