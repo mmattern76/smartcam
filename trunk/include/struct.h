@@ -8,12 +8,16 @@
  * - scan_interval: per non ripetere le scansioni una di seguito all'altra in continuo
  * - auto_send: la gumstix invia automaticamente i risultati dell'ultima scansione (può creare problemi)
  */
+#include <netinet/in.h>
+
 #define true 1
 #define false 0
 #define MAX_RISP 200
 #define ADDR_LEN 19
 #define NAME_LEN 248
 #define GUMSTIX_NAME_LEN 11
+
+#define ISALIVE(gumstix, nowtime) ((nowtime.tv_sec - gumstix.lastseen.tv_sec) < 30)
 
 typedef struct{
 	char id_gumstix[GUMSTIX_NAME_LEN];
@@ -35,5 +39,12 @@ typedef struct{
 	int num_devices;
 	Device devices[MAX_RISP];
 } Inquiry_data;
+
+typedef struct{
+	char id_gumstix[GUMSTIX_NAME_LEN];
+	struct sockaddr_in addr;
+	struct timeval lastseen;
+	Inquiry_data lastInquiry;
+} Gumstix;
 
 #endif

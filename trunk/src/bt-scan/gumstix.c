@@ -12,7 +12,7 @@ extern Configuration config;
 
 pthread_t btscan_thread, alive_thread;
 pthread_mutex_t inquiry_sem;
-struct sockaddr_in servaddr_console, servaddr_service;
+struct sockaddr_in servaddr_console, servaddr_service, servaddr_inquiry;
 int sd;
 
 void* alive(void* args) {
@@ -97,8 +97,10 @@ int main(int argc, char** argv) {
 	// Setting sockets
 	memset((char *)&servaddr_console, 0, sizeof(struct sockaddr_in));
 	memset((char *)&servaddr_service, 0, sizeof(struct sockaddr_in));
+	memset((char *)&servaddr_inquiry, 0, sizeof(struct sockaddr_in));
 	servaddr_console.sin_family = AF_INET;
 	servaddr_service.sin_family = AF_INET;
+	servaddr_inquiry.sin_family = AF_INET;
 	printf("Server: %s\n", config.server_ip);
 	host = gethostbyname(config.server_ip);
 	if (host == NULL)
@@ -112,6 +114,8 @@ int main(int argc, char** argv) {
 		servaddr_console.sin_port = htons(63170);
 		servaddr_service.sin_addr.s_addr=((struct in_addr *)(host->h_addr))->s_addr;
 		servaddr_service.sin_port = htons(63171);
+		servaddr_inquiry.sin_addr.s_addr=((struct in_addr *)(host->h_addr))->s_addr;
+		servaddr_inquiry.sin_port = htons(63172);
 	}
 
 	sd = bindSocketUDP(0, 0);
