@@ -124,7 +124,7 @@ int getGumstixPosition(struct sockaddr_in* gumstix_addr){
 
 void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr){
 	int pos;
-	if((pos = getGumstixPosition(gumstix_addr)) >= 0){ // Already known
+	if((pos = getGumstixPosition(&gumstix_addr)) >= 0){ // Already known
 		gettimeofday(&gumstix[pos].lastseen, NULL);
 	}else{ // Non already known
 		strcpy(gumstix[num_gumstix].id_gumstix, id_gumstix);
