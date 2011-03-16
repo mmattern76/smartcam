@@ -18,8 +18,8 @@
 #include <sys/time.h>
 #include <time.h>
 #include <ctype.h>
-#include "bt-scan-rssi.h"
-#include "commands.h"
+#include <bt-scan-rssi.h>
+#include <commands.h>
 
 Inquiry_data inq_data;
 Configuration config;
@@ -114,7 +114,7 @@ void* executeInquire(void * args){
 
 			if (hci_create_connection(sock, &(ii+i)->bdaddr, htobs(ptype),
 					(ii+i)->clock_offset, 0x01, &handle, 0) < 0){
-				perror("Can't create connection");
+				//perror("Can't create connection");
 				temp.devices[i].valid = false;
 				continue;
 			}

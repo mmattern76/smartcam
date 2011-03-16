@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#include "bt-scan-rssi.h"
-#include "commands.h"
+#include <bt-scan-rssi.h>
+#include <commands.h>
 
 extern Inquiry_data inq_data;
 extern Configuration config;
@@ -95,9 +95,11 @@ int main(int argc, char** argv) {
 		return 1;
 
 	// Setting sockets
+	memset((char *)&servaddr_console, 0, sizeof(struct sockaddr_in));
 	memset((char *)&servaddr_service, 0, sizeof(struct sockaddr_in));
-	servaddr_service.sin_family = AF_INET;
 	servaddr_console.sin_family = AF_INET;
+	servaddr_service.sin_family = AF_INET;
+	printf("Server: %s\n", config.server_ip);
 	host = gethostbyname(config.server_ip);
 	if (host == NULL)
 	{
@@ -107,9 +109,9 @@ int main(int argc, char** argv) {
 	else
 	{
 		servaddr_console.sin_addr.s_addr=((struct in_addr *)(host->h_addr))->s_addr;
-		servaddr_console.sin_port = htonl(63170);
+		servaddr_console.sin_port = htons(63170);
 		servaddr_service.sin_addr.s_addr=((struct in_addr *)(host->h_addr))->s_addr;
-		servaddr_service.sin_port = htonl(63171);
+		servaddr_service.sin_port = htons(63171);
 	}
 
 	sd = bindSocketUDP(0, 0);
@@ -117,7 +119,8 @@ int main(int argc, char** argv) {
 	// Hello to server
 	printf("Sending HELLO to server ...\n");
 	result = sendCommand(sd, &servaddr_service, HELLO, config.id_gumstix);
-	printf("HELLO sent to server %d...\n", result);
+	printf("HELLO sent to server ...\n");
+
 	// Initialize semaphore
 	pthread_mutex_init(&inquiry_sem, NULL);
 
