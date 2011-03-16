@@ -70,6 +70,22 @@ Gumstix gumstix[MAX_GUMSTIX];
 //	close(s);
 //}
 
+void printDevices(Inquiry_data inq_data){
+	int i;
+	time_t nowtime;
+	struct tm *nowtm;
+	char tmbuf[64];
+    
+	nowtime = inq_data.timestamp.tv_sec;
+	nowtm = localtime(&nowtime);
+	strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
+    
+	for(i = 0; i < inq_data.num_devices; i++){
+		printf("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
+               inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
+	}
+}
+
 void printGumstix(){
 	int i;
 	char ipaddr[20], port[20];
@@ -83,6 +99,7 @@ void printGumstix(){
 		nowtm = localtime(&nowtime);
 		strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
 		printf("Gumstix: %s (%s:%s) - lastseen: %s\n", gumstix[i].id_gumstix, ipaddr, port, tmbuf);
+        printDevices(gumstix[i].lastInquiry);
 	}
 }
 
@@ -99,9 +116,9 @@ Gumstix* findGumstixById(char* id_gumstix){
 }
 
 Gumstix* findGumstixByAddr(struct sockaddr_in* gumstix_addr){
-	int i = 0;
+	int i;
 
-	for(i; i < num_gumstix; i++){
+	for(i=0; i < num_gumstix; i++){
 		if(gumstix[i].addr.sin_addr.s_addr == gumstix_addr->sin_addr.s_addr){
 			return &gumstix[i];
 		}
@@ -144,22 +161,6 @@ void updateLastseen(struct sockaddr_in* gumstix_addr){
 	printGumstix();
 }
 
-void printDevices(Inquiry_data inq_data){
-	int i;
-	time_t nowtime;
-	struct tm *nowtm;
-	char tmbuf[64];
-
-	nowtime = inq_data.timestamp.tv_sec;
-	nowtm = localtime(&nowtime);
-	strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
-
-	printf("Gumstix: %s, Timestamp: %s, Devices found: %d\n", "PROVA", tmbuf, inq_data.num_devices);
-	for(i = 0; i < inq_data.num_devices; i++){
-		printf("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
-				inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
-	}
-}
 
 void* serviceThread(void* arg){
 
@@ -183,6 +184,7 @@ void* serviceThread(void* arg){
 			break;
 		case ALIVE:
 			updateLastseen(&gumstixaddr);
+            printf("Service thread: alive received\n");
 			break;
 		default:
 			printf("Command not valid ...\n");
@@ -206,6 +208,8 @@ void* inquiryThread(void* arg){
 		if(temp != NULL){
 			temp->lastInquiry = inq_data;
 		}
+        
+        printGumstix();
 	}
 }
 
