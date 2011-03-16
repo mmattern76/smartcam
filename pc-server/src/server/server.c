@@ -8,6 +8,7 @@
 #include <time.h>
 #include <commands.h>
 #include <string.h>
+#include <pthread.h>
 
 #define true 1
 #define MAX_GUMSTIX 10
@@ -70,13 +71,13 @@ Gumstix gumstix[MAX_GUMSTIX];
 //}
 
 void printGumstix(){
-	int i = 0;
+	int i;
 	char ipaddr[20], port[20];
 	time_t nowtime;
 	struct tm *nowtm;
 	char tmbuf[64];
 
-	for(i; i < num_gumstix; i++){
+	for(i = 0; i < num_gumstix; i++){
 		getnameinfo((struct sockaddr*)&gumstix[i].addr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
 		nowtime = gumstix[i].lastseen.tv_sec;
 		nowtm = localtime(&nowtime);
@@ -86,9 +87,9 @@ void printGumstix(){
 }
 
 Gumstix* findGumstixById(char* id_gumstix){
-	int i = 0;
+	int i;
 
-	for(i; i < num_gumstix; i++){
+	for(i = 0; i < num_gumstix; i++){
 		if(!strcmp(gumstix[i].id_gumstix, id_gumstix)){
 			return &gumstix[i];
 		}
@@ -109,6 +110,18 @@ Gumstix* findGumstixByAddr(struct sockaddr_in* gumstix_addr){
 	return NULL;
 }
 
+int getGumstixPosition(struct sockaddr_in* gumstix_addr){
+	int i;
+
+	for(i = 0; i < num_gumstix; i++){
+		if(gumstix[i].addr.sin_addr.s_addr == gumstix_addr->sin_addr.s_addr){
+			return i;
+		}
+	}
+
+	return -1;
+}
+
 void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr){
 	int pos;
 	if((pos = getGumstixPosition(gumstix_addr)) >= 0){ // Already known
@@ -120,18 +133,6 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr){
 		num_gumstix++;
 	}
 	printGumstix();
-}
-
-int getGumstixPosition(struct sockaddr_in* gumstix_addr){
-	int i = 0;
-
-	for(i; i < num_gumstix; i++){
-		if(gumstix[i].addr.sin_addr.s_addr == gumstix_addr->sin_addr.s_addr){
-			return i;
-		}
-	}
-
-	return -1;
 }
 
 void updateLastseen(struct sockaddr_in* gumstix_addr){
@@ -195,7 +196,6 @@ void* inquiryThread(void* arg){
 	Gumstix* temp;
 	int sInquiry;
 	struct sockaddr_in gumstixaddr;
-	char ipaddr[20], port[20];
 
 	sInquiry = bindSocketUDP(63172, 0);
 
@@ -212,10 +212,15 @@ void* inquiryThread(void* arg){
 int main(int argc, char **argv)
 {
 	int sConsole;
-
-	Inquiry_data inq_data;
+	pthread_t inqThread, servThread;
 
 	sConsole = bindSocketUDP(63170, 0);
+
+	pthread_create(&inqThread, NULL, inquiryThread, NULL);
+	pthread_create(&servThread, NULL, serviceThread, NULL);
+
+	pthread_join(inqThread, NULL);
+	pthread_join(servThread, NULL);
 
 	return 0;
 }

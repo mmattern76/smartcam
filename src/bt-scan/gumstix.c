@@ -20,7 +20,6 @@ void* alive(void* args) {
 		sendCommand(sd, &servaddr_service, ALIVE, NULL);
 		sleep(ALIVE_INTERVAL);
 	}
-
 }
 
 int initParameter(int argc, char** argv) {
