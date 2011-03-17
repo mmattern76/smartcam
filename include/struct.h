@@ -12,7 +12,7 @@
 
 #define true 1
 #define false 0
-#define MAX_RISP 20
+#define MAX_RISP 100
 #define ADDR_LEN 19
 #define NAME_LEN 248
 #define GUMSTIX_NAME_LEN 11
