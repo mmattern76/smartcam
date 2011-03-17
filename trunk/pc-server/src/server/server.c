@@ -148,10 +148,12 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
     if (temp != NULL) {
         if ( temp->addr.sin_addr.s_addr != gumstix_addr.sin_addr.s_addr) { // Error: conflict name
             sendCommand(socket, &gumstix_addr, HELLO_ERR, "Id exists");
+            printf("Error: name already exists - %s\n", id_gumstix);
         }
         else {
             gettimeofday(&temp->lastseen, NULL); // Already known
             sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
+            printf("Sent hello ack to %s\n", id_gumstix);
         }
     }
 	else { // Non already known
@@ -159,6 +161,9 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
 		gumstix[num_gumstix].addr = gumstix_addr;
 		gettimeofday(&gumstix[num_gumstix].lastseen, NULL);
 		num_gumstix++;
+        
+        sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
+        printf("Sent hello ack to %s\n", id_gumstix);
 	}
 	printGumstix();
 }
