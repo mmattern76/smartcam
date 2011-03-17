@@ -25,7 +25,7 @@ Inquiry_data inq_data;
 Configuration config;
 extern pthread_mutex_t inquiry_sem;
 extern int sd;
-extern struct sockaddr_in servaddr_inquiry;
+extern struct sockaddr_in servaddr_service, servaddr_inquiry;
 
 int compareDevices(const void* a, const void* b){
 	Device *d1 = (Device*) a;
@@ -64,6 +64,7 @@ void* executeInquire(void * args){
 
 	inquiry_info *ii;
 	Inquiry_data temp;
+	char numDev[5];
 	int i, dev_id, sock, len, flags, num_rsp;
 	char name[NAME_LEN] = { 0 };
 	uint16_t handle;
@@ -151,6 +152,13 @@ void* executeInquire(void * args){
 		if(config.auto_send && inq_data.num_devices > 0){
 			printf("Sending inquiry data to server ...\n");
 			sendInquiryData(sd, &servaddr_inquiry, inq_data);
+		}
+
+		if(inq_data.num_devices > config.alarm_threshold){
+			printf("Sending alarm to server ...\n");
+			sprintf(numDev, "%d", inq_data.num_devices);
+			sendCommand(sd, &servaddr_service, ALARM, numDev);
+			sendImage("../data/images/lena.bmp-inv.jpeg");
 		}
 	}
 
