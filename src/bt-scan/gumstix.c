@@ -27,7 +27,7 @@ void* alive(void* args) {
 
 int sendImage(char* fileName){
 
-	int s, status, img_fd, img_len, temp;
+	int s, status, img_fd, img_len;
 	char buf[1024];
 
 	// allocate a socket
@@ -39,23 +39,22 @@ int sendImage(char* fileName){
 	img_fd = open(fileName, O_RDONLY);
 	img_len = 0;
 
-	while((temp = read(img_fd, buf, sizeof(char) * 1024)) > 0){
-		img_len += temp;
-	}
+	img_len = lseek(img_fd, 0L, SEEK_END);
+	lseek(img_fd, 0L, SEEK_SET);
 
 	printf("Sending image size: %i\n", img_len);
 	img_len = htonl(img_len);
 	write(s, &img_len, sizeof(img_len));
-	close(img_fd);
 
 	printf("Sending image ...\n");
-	img_fd = open(fileName, O_RDONLY);
 	while((img_len = read(img_fd, buf, sizeof(char) * 1024)) > 0){
 		write(s, buf, sizeof(char) * img_len);
 	}
 
 	close(img_fd);
 	close(s);
+
+	printf("Image sent ...\n");
 
 	return 0;
 }
@@ -177,6 +176,8 @@ int main(int argc, char** argv) {
 		printf("%s \"%s\"\n", command.param, config.id_gumstix);
 		exit(1);
 	}
+
+	//sendImage("../data/images/lena.bmp-inv.jpeg");
 
 	// Initialize semaphore
 	pthread_mutex_init(&inquiry_sem, NULL);

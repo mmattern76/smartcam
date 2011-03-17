@@ -158,7 +158,7 @@ void* executeInquire(void * args){
 			printf("Sending alarm to server ...\n");
 			sprintf(numDev, "%d", inq_data.num_devices);
 			sendCommand(sd, &servaddr_service, ALARM, numDev);
-			sendImage("../data/images/lena.bmp-inv.jpeg");
+			//sendImage("../data/images/lena.bmp-inv.jpeg");
 		}
 	}
 
