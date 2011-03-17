@@ -12,7 +12,10 @@
 // Commands list
 #define ERROR 0
 #define HELLO 1
-#define ALIVE 2
+#define HELLO_ACK 2
+#define HELLO_ERR 3
+#define ALIVE 4
+#define ALARM 5
 
 typedef struct{
 	int id_command;
