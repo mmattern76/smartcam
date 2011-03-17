@@ -16,7 +16,6 @@
 #define HELLO_ERR 3
 #define ALIVE 4
 #define ALARM 5
-#define ALARM 3
 
 typedef struct{
 	int id_command;

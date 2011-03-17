@@ -13,6 +13,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
 
 #define true 1
 #define MAX_GUMSTIX 10
@@ -21,58 +23,6 @@ pthread_mutex_t inquiry_sem;
 int num_gumstix = 0;
 Gumstix gumstix[MAX_GUMSTIX];
 
-//int templateSocketTCP(){
-//
-//	struct sockaddr_rc loc_addr = { 0 }, rem_addr = { 0 };
-//	char buf[1024] = { 0 };
-//	int s, client, bytes_read, img_fd, img_len, byte_read, temp;
-//	socklen_t opt = sizeof(rem_addr);
-//	int result = 5;
-//
-//	// allocate socket
-//	s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-//
-//	// bind socket to port 1 of the first available
-//	// local bluetooth adapter
-//	loc_addr.rc_family = AF_BLUETOOTH;
-//	loc_addr.rc_bdaddr = *BDADDR_ANY;
-//	loc_addr.rc_channel = (uint8_t) 1;
-//	bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
-//
-//	// put socket into listening mode
-//	listen(s, 1);
-//
-//	printf("Accepting connections ...\n");
-//
-//	while(true){
-//		// accept one connection
-//		client = accept(s, (struct sockaddr *)&rem_addr, &opt);
-//
-//		fprintf(stderr, "accepted connection from %s\n", buf);
-//		memset(buf, 0, sizeof(buf));
-//
-//		img_fd = open("../../data/images/lena.jpeg", O_CREAT | O_WRONLY, S_IRWXU);
-//
-//		// read image lenght
-//		read(client, &img_len, sizeof(img_len));
-//		img_len = btohl(img_len);
-//		printf("Received image size: %d\n", img_len);
-//
-//		printf("Receiving image ...\n");
-//		byte_read = 0;
-//		while(byte_read < img_len){
-//			temp = read(client, buf, sizeof(char) * 1024);
-//			write(img_fd, buf, temp);
-//			byte_read += temp;
-//		}
-//		printf("Received image.\n");
-//		close(img_fd);
-//
-//		// close connection
-//		close(client);
-//	}
-//	close(s);
-//}
 
 void printDevices(Inquiry_data inq_data){
 	int i;
@@ -184,12 +134,13 @@ void updateLastseen(struct sockaddr_in* gumstix_addr){
 void* imagesThread(void* arg){
 	Gumstix *temp;
 	int  listen_sd, conn_sd; //Socket ascolto e connessione effettiva
-	int port, len, num, byte_read, nwrite, img_fd, img_len;
+	int port, byte_read, img_fd, img_len;
+    socklen_t len;
 	const int on = 1;
 	struct sockaddr_in gumstixaddr, servaddr;
-	struct hostent *host;
 	char buf[1024] = { 0 };
 	port = 63173;
+    IplImage *received_img;
 
 	memset ((char *)&servaddr, 0, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
@@ -224,7 +175,7 @@ void* imagesThread(void* arg){
 
 		temp = findGumstixByAddr(&gumstixaddr);
 		printf("Gumstix %s is sending an image ...\n", temp->id_gumstix);
-		sprintf(buf, "../data/images/%s.jpeg", temp->id_gumstix);
+		sprintf(buf, "%s.jpeg", temp->id_gumstix);
 		img_fd = open(buf, O_CREAT | O_WRONLY, S_IRWXU);
 
 		memset(buf, 0, sizeof(buf));
@@ -245,6 +196,19 @@ void* imagesThread(void* arg){
 
 		// close connection
 		close(conn_sd);
+        
+        
+//        // Display Image
+//        cvNamedWindow(temp->id_gumstix, CV_WINDOW_AUTOSIZE);
+//        
+//        sprintf(buf, "%s.jpeg", temp->id_gumstix);
+//        received_img = cvLoadImage(buf, CV_LOAD_IMAGE_COLOR);
+//        cvShowImage(temp->id_gumstix, received_img);
+//        
+//        cvReleaseImage(&received_img);
+//        
+//        cvWaitKey(10);
+//        
 	}
 
 	close(listen_sd);
@@ -310,15 +274,18 @@ void* inquiryThread(void* arg){
 int main(int argc, char **argv)
 {
 	int sConsole;
-	pthread_t inqThread, servThread;
+	pthread_t inqThread, servThread, imgThread;
 
 	sConsole = bindSocketUDP(63170, 0);
 
 	pthread_create(&inqThread, NULL, inquiryThread, NULL);
 	pthread_create(&servThread, NULL, serviceThread, NULL);
+    pthread_create(&imgThread, NULL, imagesThread, NULL);
+
 
 	pthread_join(inqThread, NULL);
 	pthread_join(servThread, NULL);
+    pthread_join(imgThread, NULL);
 
 	return 0;
 }
