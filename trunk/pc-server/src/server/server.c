@@ -83,6 +83,7 @@ void printDevices(Inquiry_data inq_data){
 	for(i = 0; i < inq_data.num_devices; i++){
 		printf("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
                inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
+        fflush(stdout);
 	}
 }
 
@@ -139,11 +140,21 @@ int getGumstixPosition(struct sockaddr_in* gumstix_addr){
 	return -1;
 }
 
-void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr){
-	int pos;
-	if((pos = getGumstixPosition(&gumstix_addr)) >= 0){ // Already known
-		gettimeofday(&gumstix[pos].lastseen, NULL);
-	}else{ // Non already known
+void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
+    Gumstix *temp;
+    
+    temp = findGumstixById(id_gumstix);
+    
+    if (temp != NULL) {
+        if ( temp->addr.sin_addr.s_addr != gumstix_addr.sin_addr.s_addr) { // Error: conflict name
+            sendCommand(socket, &gumstix_addr, HELLO_ERR, "Id exists");
+        }
+        else {
+            gettimeofday(&temp->lastseen, NULL); // Already known
+            sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
+        }
+    }
+	else { // Non already known
 		strcpy(gumstix[num_gumstix].id_gumstix, id_gumstix);
 		gumstix[num_gumstix].addr = gumstix_addr;
 		gettimeofday(&gumstix[num_gumstix].lastseen, NULL);
@@ -168,6 +179,7 @@ void* serviceThread(void* arg){
 	struct sockaddr_in gumstixaddr;
 	char ipaddr[20], port[20];
 	int sService;
+    Gumstix *temp;
 
 	sService = bindSocketUDP(63171, 0);
 
@@ -180,12 +192,17 @@ void* serviceThread(void* arg){
 		case HELLO:
 			getnameinfo((struct sockaddr*)&gumstixaddr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
 			printf("Received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
-			addGumstix(command.param, gumstixaddr);
+			addGumstix(command.param, gumstixaddr, sService);
 			break;
 		case ALIVE:
 			updateLastseen(&gumstixaddr);
             printf("Service thread: alive received\n");
 			break;
+        case ALARM:
+            updateLastseen(&gumstixaddr);
+            temp = findGumstixByAddr(&gumstixaddr);
+            printf("Alarm received from %s. Num devices: %s\n", temp->id_gumstix, command.param);
+            break;
 		default:
 			printf("Command not valid ...\n");
 		}
@@ -209,7 +226,7 @@ void* inquiryThread(void* arg){
 			temp->lastInquiry = inq_data;
 		}
         
-        printGumstix();
+        printDevices(inq_data);
 	}
 }
 
