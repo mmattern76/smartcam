@@ -131,6 +131,20 @@ void updateLastseen(struct sockaddr_in* gumstix_addr){
 	printGumstix();
 }
 
+void displayImage(char *file_name, char *window_name) {
+    IplImage *img;
+
+    // Display Image
+    cvNamedWindow(window_name, CV_WINDOW_AUTOSIZE);
+    
+    img = cvLoadImage(file_name, CV_LOAD_IMAGE_COLOR);
+    cvShowImage(window_name, img);
+    
+    cvReleaseImage(&img);
+}
+
+
+
 void* imagesThread(void* arg){
 	Gumstix *temp;
 	int  listen_sd, conn_sd; //Socket ascolto e connessione effettiva
@@ -140,7 +154,6 @@ void* imagesThread(void* arg){
 	struct sockaddr_in gumstixaddr, servaddr;
 	char buf[1024] = { 0 };
 	port = 63173;
-    IplImage *received_img;
 
 	memset ((char *)&servaddr, 0, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
@@ -161,6 +174,8 @@ void* imagesThread(void* arg){
 
 	if (listen(listen_sd, 5)<0)
 	{perror("listen"); exit(1);}
+    
+    displayImage("Gumstix1.jpeg", "AAA");
 
 	while(true){
 		len=sizeof(gumstixaddr);
@@ -196,19 +211,10 @@ void* imagesThread(void* arg){
 
 		// close connection
 		close(conn_sd);
+        sprintf(buf, "%s.jpeg", temp->id_gumstix);
         
-        
-//        // Display Image
-//        cvNamedWindow(temp->id_gumstix, CV_WINDOW_AUTOSIZE);
-//        
-//        sprintf(buf, "%s.jpeg", temp->id_gumstix);
-//        received_img = cvLoadImage(buf, CV_LOAD_IMAGE_COLOR);
-//        cvShowImage(temp->id_gumstix, received_img);
-//        
-//        cvReleaseImage(&received_img);
-//        
-//        cvWaitKey(10);
-//        
+        displayImage(buf, temp->id_gumstix);
+
 	}
 
 	close(listen_sd);
@@ -281,6 +287,11 @@ int main(int argc, char **argv)
 	pthread_create(&inqThread, NULL, inquiryThread, NULL);
 	pthread_create(&servThread, NULL, serviceThread, NULL);
     pthread_create(&imgThread, NULL, imagesThread, NULL);
+    
+    
+    while(true) {
+        cvWaitKey(10);
+    }
 
 
 	pthread_join(inqThread, NULL);
