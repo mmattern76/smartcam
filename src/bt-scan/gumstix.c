@@ -26,6 +26,7 @@ void* alive(void* args) {
 }
 
 int sendImage(char* fileName){
+	// Sends fileName (absolute path) image to server
 
 	int s, status, img_fd, img_len;
 	char buf[1024];
@@ -137,7 +138,7 @@ int main(int argc, char** argv) {
 	if (!initParameter(argc, argv))
 		return 1;
 
-	// Setting sockets
+	// Setting server addresses and sockets
 	memset((char *)&servaddr_console, 0, sizeof(struct sockaddr_in));
 	memset((char *)&servaddr_service, 0, sizeof(struct sockaddr_in));
 	memset((char *)&servaddr_inquiry, 0, sizeof(struct sockaddr_in));
@@ -177,17 +178,18 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	//sendImage("../data/images/lena.bmp-inv.jpeg");
+	sendImage("../data/images/lena.bmp-inv.jpeg");
 
 	// Initialize semaphore
 	pthread_mutex_init(&inquiry_sem, NULL);
 
+	// Create alive thread
 	pthread_create(&alive_thread, NULL, alive, NULL);
 
 	// Create scanning thread
 	pthread_create(&btscan_thread, NULL, executeInquire, NULL);
 
-	// Receiving commands from server
+	// Receiving commands from server console
 	while (true) {
 
 		command = receiveCommand(sd, NULL);

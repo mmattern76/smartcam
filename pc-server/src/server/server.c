@@ -236,7 +236,8 @@ void* imagesThread(void* arg){
 }
 
 void* serviceThread(void* arg){
-	// This thread listens for commands from Gumstixes
+	// This thread listens for HELLO, ALIVE, and ALARM
+	// commands from Gumstixes
 
 	Command command;
 	struct sockaddr_in gumstixaddr;

@@ -61,6 +61,8 @@ void printDevices(Inquiry_data inq_data){
 }
 
 void* executeInquire(void * args){
+	// This thread executes cyclically a scanning of nearby
+	// bluetooth devices and saves it into inq_data
 
 	inquiry_info *ii;
 	Inquiry_data temp;

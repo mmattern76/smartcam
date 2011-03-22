@@ -10,10 +10,7 @@ SET ( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../bin )
 SET ( DOC_OUTPUT_PATH ${CMAKE_BINARY_DIR}/../doc )
 SET ( CMAKE_C_FLAGS "-D_REENTRANT -Wno-unused-function" )
 
-#ADD_SUBDIRECTORY (src)
-
-OPTION( SERVER "Build bluetooth client program" ON )
-
+OPTION( SERVER "Build gumstix server program" ON )
 
 IF(SERVER)
 	ADD_SUBDIRECTORY ( server )
