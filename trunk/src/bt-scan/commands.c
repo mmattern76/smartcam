@@ -16,6 +16,7 @@ extern Configuration config;
 extern pthread_mutex_t inquiry_sem;
 
 int bindSocketUDP(int localPort, int timeoutSeconds){
+	// Binds a new socket to localPort with timeoutSeconds timeout
 
 	struct sockaddr_in localaddr;
 	struct timeval timeout;
@@ -42,6 +43,7 @@ int bindSocketUDP(int localPort, int timeoutSeconds){
 }
 
 int sendCommand(int sd, struct sockaddr_in* destinationaddr, int id_command, char* param){
+	// Send command id_command to destinationaddr through sd socket
 
 	Command command;
 
@@ -59,6 +61,7 @@ int sendCommand(int sd, struct sockaddr_in* destinationaddr, int id_command, cha
 }
 
 Command receiveCommand(int sd, struct sockaddr_in* sender){
+	// Receive command from sender through sd socket
 
 	Command command;
 	socklen_t len = sizeof(struct sockaddr_in);
@@ -72,6 +75,7 @@ Command receiveCommand(int sd, struct sockaddr_in* sender){
 }
 
 int sendInquiryData(int sd, struct sockaddr_in* destinationaddr, Inquiry_data inq){
+	// Send inquiry data to destinationaddr through sd socket
 
 	pthread_mutex_lock(&inquiry_sem);
 
@@ -87,6 +91,7 @@ int sendInquiryData(int sd, struct sockaddr_in* destinationaddr, Inquiry_data in
 }
 
 Inquiry_data receiveInquiryData(int sd, struct sockaddr_in* sender){
+	// Receive inquiry data from sender through sd socket
 
 	Inquiry_data inq;
 	socklen_t len = sizeof(struct sockaddr_in);
