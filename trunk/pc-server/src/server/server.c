@@ -288,6 +288,7 @@ void* inquiryThread(void* arg){
 	while(true){
 		inq_data = receiveInquiryData(sInquiry, &gumstixaddr);
 		temp = findGumstixByAddr(&gumstixaddr);
+		printf("Received inquiry from %s:\n", temp->id_gumstix);
 		if(temp != NULL){
 			temp->lastInquiry = inq_data;
 		}
@@ -309,7 +310,9 @@ int main(int argc, char **argv)
     
     
     while(true) {
-        cvWaitKey(10);
+        if(cvWaitKey(10) == 27){
+			cvDestroyAllWindows();
+		}
     }
 
 
