@@ -54,53 +54,53 @@ int getDevices(char dev_addr[MAX_RISP][19], int max_rsp){
 
 int main(int argc, char **argv)
 {
-	struct sockaddr_rc addr = { 0 };
-    int s, status, num_rsp, dev_num, returnInt, img_fd, img_len, i, temp;
-    char dev[4], buf[1024];
-    char dev_addr[MAX_RISP][ADDR_LEN];
-
-    num_rsp = getDevices(dev_addr, MAX_RISP);
-
-    if(num_rsp < 0){
-    	exit(1);
-    }
-
-    printf("Choice a number between 1 and %d: ", num_rsp);
-    gets(dev);
-    dev_num = atoi(dev) - 1;
-
-    // set the connection parameters (who to connect to)
-    addr.rc_family = AF_BLUETOOTH;
-    addr.rc_channel = (uint8_t) 1;
-
-    printf("Selected %d\n", dev_num + 1);
-    printf("Selected address: %s\n", dev_addr[dev_num]);
-    str2ba(dev_addr[dev_num], &addr.rc_bdaddr);
-
-    // allocate a socket
-    s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-
-    // connect to server
-    status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
-
-    img_fd = open("../data/images/lena.bmp-inv.jpeg", O_RDONLY);
-    img_len = 0;
-
-    while((temp = read(img_fd, buf, sizeof(char) * 1024)) > 0){
-    	img_len += temp;
-    }
-    printf("Sending image size: %i\n", img_len);
-    write(s, &htobl(img_len), sizeof(img_len));
-    close(img_fd);
-
-    printf("Sending image ...\n");
-    img_fd = open("../data/images/lena.bmp-inv.jpeg", O_RDONLY);
-    while((img_len = read(img_fd, buf, sizeof(char) * 1024)) > 0){
-    	write(s, buf, sizeof(char) * img_len);
-    }
-
-    close(img_fd);
-    close(s);
+//	struct sockaddr_rc addr = { 0 };
+//    int s, status, num_rsp, dev_num, returnInt, img_fd, img_len, i, temp;
+//    char dev[4], buf[1024];
+//    char dev_addr[MAX_RISP][ADDR_LEN];
+//
+//    num_rsp = getDevices(dev_addr, MAX_RISP);
+//
+//    if(num_rsp < 0){
+//    	exit(1);
+//    }
+//
+//    printf("Choice a number between 1 and %d: ", num_rsp);
+//    gets(dev);
+//    dev_num = atoi(dev) - 1;
+//
+//    // set the connection parameters (who to connect to)
+//    addr.rc_family = AF_BLUETOOTH;
+//    addr.rc_channel = (uint8_t) 1;
+//
+//    printf("Selected %d\n", dev_num + 1);
+//    printf("Selected address: %s\n", dev_addr[dev_num]);
+//    str2ba(dev_addr[dev_num], &addr.rc_bdaddr);
+//
+//    // allocate a socket
+//    s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+//
+//    // connect to server
+//    status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
+//
+//    img_fd = open("../data/images/lena.bmp-inv.jpeg", O_RDONLY);
+//    img_len = 0;
+//
+//    while((temp = read(img_fd, buf, sizeof(char) * 1024)) > 0){
+//    	img_len += temp;
+//    }
+//    printf("Sending image size: %i\n", img_len);
+//    write(s, &htobl(img_len), sizeof(img_len));
+//    close(img_fd);
+//
+//    printf("Sending image ...\n");
+//    img_fd = open("../data/images/lena.bmp-inv.jpeg", O_RDONLY);
+//    while((img_len = read(img_fd, buf, sizeof(char) * 1024)) > 0){
+//    	write(s, buf, sizeof(char) * img_len);
+//    }
+//
+//    close(img_fd);
+//    close(s);
     return 0;
 }
 
