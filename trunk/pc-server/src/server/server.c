@@ -37,7 +37,6 @@ void printDevices(Inquiry_data inq_data){
 	for(i = 0; i < inq_data.num_devices; i++){
 		printf("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
 				inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
-		fflush(stdout);
 	}
 }
 
