@@ -30,7 +30,6 @@ int bindSocketUDP(int localPort, int timeoutSeconds){
 
 	sd=socket(AF_INET, SOCK_DGRAM, 0);
 	if(sd<0) {perror("apertura socket"); exit(3);}
-	printf("Creata la socket sd=%d\n", sd);
 	/* BIND SOCKET, a una porta scelta dal sistema --------------- */
 	if(bind(sd,(struct sockaddr *) &localaddr, sizeof(localaddr))<0)
 	{perror("bind socket "); exit(1);}

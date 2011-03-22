@@ -137,7 +137,6 @@ void updateLastseen(struct sockaddr_in* gumstix_addr){
 	temp = findGumstixByAddr(gumstix_addr);
 	if(temp != NULL){
 		gettimeofday(&temp->lastseen, NULL);
-		printGumstix();
 	}
 }
 
@@ -176,7 +175,6 @@ void* imagesThread(void* arg){
 
 	if(listen_sd <0)
 	{perror("creazione socket "); exit(1);}
-	printf("Server: created listen socket for receiving images from gumstixes, fd=%d\n", listen_sd);
 
 	if(setsockopt(listen_sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))<0)
 	{perror("set listen socket options"); exit(1);}
@@ -186,6 +184,8 @@ void* imagesThread(void* arg){
 
 	if (listen(listen_sd, 5)<0)
 	{perror("listen"); exit(1);}
+	
+	printf("Images thread ready ...\n");
 
 	while(true){
 		len=sizeof(gumstixaddr);
@@ -246,29 +246,30 @@ void* serviceThread(void* arg){
 	Gumstix *temp;
 
 	sService = bindSocketUDP(63171, 0);
+	
+	printf("Service thread ready ...\n");
 
 	while(true){
-		printf("Waiting command ...\n");
 		command = receiveCommand(sService, &gumstixaddr);
 
 		switch(command.id_command){
 
 		case HELLO:
 			getnameinfo((struct sockaddr*)&gumstixaddr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
-			printf("Received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
+			printf("Service thread: received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
 			addGumstix(command.param, gumstixaddr, sService);
 			break;
 		case ALIVE:
 			updateLastseen(&gumstixaddr);
-			printf("Service thread: alive received\n");
+			printf("Service thread: alive received from %s\n", command.param);
 			break;
 		case ALARM:
 			updateLastseen(&gumstixaddr);
 			temp = findGumstixByAddr(&gumstixaddr);
-			printf("Alarm received from %s. Num devices: %s\n", temp->id_gumstix, command.param);
+			printf("Service thread: alarm received from %s. Num devices: %s\n", temp->id_gumstix, command.param);
 			break;
 		default:
-			printf("Command not valid ...\n");
+			printf("Service thread: command not valid ...\n");
 		}
 	}
 }
@@ -282,9 +283,10 @@ void* inquiryThread(void* arg){
 	struct sockaddr_in gumstixaddr;
 
 	sInquiry = bindSocketUDP(63172, 0);
+	
+	printf("Inquiry thread ready ...\n");
 
 	while(true){
-		printf("Waiting Inquiry ...\n");
 		inq_data = receiveInquiryData(sInquiry, &gumstixaddr);
 		temp = findGumstixByAddr(&gumstixaddr);
 		if(temp != NULL){
