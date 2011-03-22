@@ -33,7 +33,7 @@ typedef struct{
 
 typedef struct{
 	struct timeval timestamp;
-	u_int num_devices;
+	int num_devices;
 	Device devices[MAX_RISP];
 } Inquiry_data;
 
