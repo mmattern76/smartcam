@@ -20,7 +20,7 @@ int sd;
 
 void* alive(void* args) {
 	while(true) {
-		sendCommand(sd, &servaddr_service, ALIVE, NULL);
+		sendCommand(sd, &servaddr_service, ALIVE, config.id_gumstix);
 		sleep(ALIVE_INTERVAL);
 	}
 }
