@@ -66,7 +66,8 @@ Gumstix* findGumstixById(char* id_gumstix){
 			return &gumstix[i];
 		}
 	}
-
+	
+	// If not found
 	return NULL;
 }
 
@@ -79,6 +80,7 @@ Gumstix* findGumstixByAddr(struct sockaddr_in* gumstix_addr){
 		}
 	}
 
+	// If not found
 	return NULL;
 }
 
@@ -91,6 +93,7 @@ int getGumstixPosition(struct sockaddr_in* gumstix_addr){
 		}
 	}
 
+	// If not found
 	return -1;
 }
 
@@ -99,18 +102,24 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
 
 	temp = findGumstixById(id_gumstix);
 
-	if (temp != NULL) {
-		if ( temp->addr.sin_addr.s_addr != gumstix_addr.sin_addr.s_addr) { // Error: conflict name
+	if (temp != NULL) { // Already known
+		if ( temp->addr.sin_addr.s_addr != gumstix_addr.sin_addr.s_addr) { 
+			// Error: trying to add a Gumstix with same id
+			// and different IP address
 			sendCommand(socket, &gumstix_addr, HELLO_ERR, "Id exists");
 			printf("Error: name already exists - %s\n", id_gumstix);
 		}
 		else {
-			gettimeofday(&temp->lastseen, NULL); // Already known
+			// Already known: this is a new Hello from
+			// the same Gumstix
+			gettimeofday(&temp->lastseen, NULL);
 			sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
 			printf("Sent hello ack to %s\n", id_gumstix);
 		}
 	}
-	else { // Non already known
+	else { 
+		// Non already known: first Hello
+		// Adding new entry
 		strcpy(gumstix[num_gumstix].id_gumstix, id_gumstix);
 		gumstix[num_gumstix].addr = gumstix_addr;
 		gettimeofday(&gumstix[num_gumstix].lastseen, NULL);
@@ -118,8 +127,9 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
 
 		sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
 		printf("Sent hello ack to %s\n", id_gumstix);
+		printf("Added new Gumstix: %s\n", id_gumstix);
+		printGumstix();
 	}
-	printGumstix();
 }
 
 void updateLastseen(struct sockaddr_in* gumstix_addr){
@@ -127,8 +137,8 @@ void updateLastseen(struct sockaddr_in* gumstix_addr){
 	temp = findGumstixByAddr(gumstix_addr);
 	if(temp != NULL){
 		gettimeofday(&temp->lastseen, NULL);
+		printGumstix();
 	}
-	printGumstix();
 }
 
 void displayImage(char *file_name, char *window_name) {
@@ -146,8 +156,10 @@ void displayImage(char *file_name, char *window_name) {
 
 
 void* imagesThread(void* arg){
+	// This thread receives images from Gumstixes
+
 	Gumstix *temp;
-	int  listen_sd, conn_sd; //Socket ascolto e connessione effettiva
+	int  listen_sd, conn_sd; // Listen and connection socket
 	int port, byte_read, img_fd, img_len;
     socklen_t len;
 	const int on = 1;
@@ -164,31 +176,34 @@ void* imagesThread(void* arg){
 
 	if(listen_sd <0)
 	{perror("creazione socket "); exit(1);}
-	printf("Server: created socket for receiving images from gumstix, fd=%d\n", listen_sd);
+	printf("Server: created listen socket for receiving images from gumstixes, fd=%d\n", listen_sd);
 
 	if(setsockopt(listen_sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))<0)
-	{perror("set opzioni socket d'ascolto"); exit(1);}
+	{perror("set listen socket options"); exit(1);}
 
 	if(bind(listen_sd,(struct sockaddr *) &servaddr, sizeof(servaddr))<0)
-	{perror("bind socket d'ascolto"); exit(1);}
+	{perror("bind listen socket"); exit(1);}
 
 	if (listen(listen_sd, 5)<0)
 	{perror("listen"); exit(1);}
-    
-    displayImage("Gumstix1.jpeg", "AAA");
 
 	while(true){
 		len=sizeof(gumstixaddr);
 
 		if((conn_sd=accept(listen_sd,(struct sockaddr *)&gumstixaddr,&len))<0){
 			if (errno==EINTR){
-				perror("Forzo la continuazione della accept");
+				perror("continuing with accept");
 				continue;
 			}
 			else exit(1);
 		}
 
 		temp = findGumstixByAddr(&gumstixaddr);
+		if(temp == NULL){
+			close(conn_sd);
+			continue;
+		}
+		
 		printf("Gumstix %s is sending an image ...\n", temp->id_gumstix);
 		sprintf(buf, "%s.jpeg", temp->id_gumstix);
 		img_fd = open(buf, O_CREAT | O_WRONLY, S_IRWXU);
@@ -221,6 +236,7 @@ void* imagesThread(void* arg){
 }
 
 void* serviceThread(void* arg){
+	// This thread listens for commands from Gumstixes
 
 	Command command;
 	struct sockaddr_in gumstixaddr;
@@ -257,7 +273,8 @@ void* serviceThread(void* arg){
 }
 
 void* inquiryThread(void* arg){
-
+	// This thread receives inquiries from Gumstixes
+	
 	Inquiry_data inq_data;
 	Gumstix* temp;
 	int sInquiry;
