@@ -20,7 +20,11 @@ typedef struct{
 	char id_gumstix[GUMSTIX_NAME_LEN];
 	int alarm_threshold;
 	int scan_lenght;
-	int auto_send;
+	int auto_send_inquiry;
+	int auto_send_images;
+	int color_threshold;
+	int image_width;
+	int image_height;
 	char server_ip[16];
 } Configuration;
 
