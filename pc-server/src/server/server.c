@@ -297,17 +297,164 @@ void* inquiryThread(void* arg){
 	}
 }
 
+
+enum cmd_id getCommandIdForParameter(char* param_name, int is_set) {
+    
+    if (!strcasecmp(param_name, "auto_send_inquiry")) {
+        return is_set ? SET_AUTO_SEND_INQUIRY : GET_AUTO_SEND_INQUIRY;
+    }
+    else if (!strcasecmp(param_name, "auto_send_images")) {
+        return is_set ? SET_AUTO_SEND_IMAGES : GET_AUTO_SEND_IMAGES;
+    }
+    
+    else if (!strcasecmp(param_name, "scan_length")) {
+        return is_set ?  SET_SCAN_LENGTH : GET_SCAN_LENGTH;
+    }
+    else if (!strcasecmp(param_name, "image")) {
+        return is_set ?  ERROR : GET_IMAGE;
+    }
+    else if (!strcasecmp(param_name, "inquiry")) {
+        return is_set ?  ERROR : GET_INQUIRY;
+    }
+    
+    
+    else return ERROR;
+
+}
+
+
+void* consoleThread(void* arg){
+	// This thread manages the interaction with the user 
+	
+    int sConsole;
+    char cmd_string[255];
+    
+    char delims[] = " ";
+    char *cmd_name = NULL;
+    char *cmd_target = NULL;
+    char *cmd_param_name = NULL;
+    char *cmd_param_value = NULL;    
+    enum cmd_id command_id;
+    
+    Command gumstix_answer;
+    
+	Gumstix* target;
+    
+	sConsole = bindSocketUDP(63170, 0);
+	
+	printf("Console thread ready ...\n");
+    
+	while(true){
+        printf("> ");
+
+        memset(cmd_string, 0, 255);
+        
+        if (gets(cmd_string) == NULL) {
+            continue;
+        }
+        
+        if (strlen(cmd_string) == 0) {
+            continue;
+        }
+        
+        cmd_name = strtok( cmd_string, delims );
+        
+        // Comandi che agiscono localmente al server
+        if (!strcasecmp(cmd_name, "list")) {
+            printf("Stampo la lista di tutti le gumstix\n");
+            continue;
+        }
+        
+        if (!strcasecmp(cmd_name, "help")) {
+            printf("Stampo la lista di tutti i comandi validi\n");
+            continue;
+        }
+        
+        
+        // Comandi che scambiano dati con le gumstix
+        cmd_target = strtok( NULL, delims );
+        target = findGumstixById(cmd_target);
+        
+//        if (target == NULL) {
+//            printf("Error for command %s: can't find the following gumstix id: %s\n", cmd_name, cmd_target);
+//            continue;
+//        }
+        
+        
+        if (!strcasecmp(cmd_name, "get")) {
+            cmd_param_name = strtok( NULL, delims );
+            
+            if (cmd_param_name == NULL) {
+                printf("Syntax error: get gumstix_id param_name\n");
+                continue;
+            }
+            
+            printf("Get %s\n", cmd_param_name);
+            
+            command_id = getCommandIdForParameter(cmd_param_name, false);
+            if (command_id == ERROR) {
+                printf("Unknown parameter: %s\n", cmd_param_name);
+                continue;
+            }
+            
+            printf("OK: invio il comando per richiedere il valore del parametro\n");
+            // sendCommand(sConsole, &target->addr, command_id, "");
+            
+            if (command_id != GET_IMAGE) {
+                // gumstix_answer = receiveCommand(sConsole, &target->addr);
+                // printf("%s: %s", cmd_param_name, gumstix_answer.param);
+                printf("Qui stampo la risposta\n");
+            }
+            continue;
+        }
+        
+        
+        if (!strcasecmp(cmd_name, "set")) {
+            cmd_param_name = strtok( NULL, delims );
+            cmd_param_value = strtok( NULL, delims );
+            
+            if (cmd_param_name == NULL || cmd_param_value == NULL) {
+                printf("Syntax error: set gumstix_id param_name param_value\n");
+                continue;
+            }
+            
+            printf("Set %s to value: %s\n", cmd_param_name, cmd_param_value);
+            
+            command_id = getCommandIdForParameter(cmd_param_name, true);
+            if (command_id == ERROR) {
+                printf("Parameter is unknown or unsettable: %s\n", cmd_param_name);
+                continue;
+            }
+            
+            printf("OK: invio il comando per modificare il parametro\n");
+            // sendCommand(sConsole, &target->addr, command_id, cmd_param_value);
+            
+            // Lo mettiamo un ACK?
+            /*
+            gumstix_answer = receiveCommand(sConsole, &target->addr);
+            if (gumstix_answer.id_command != PARAM_ACK ) {
+                printf("Error while setting parameter: %s\n", cmd_param_name);
+            }
+             */
+            continue;
+        }
+        
+        printf("Unknown command: %s\nType 'help' for more information\n", cmd_name);
+	}
+}
+
+
 int main(int argc, char **argv)
 {
-	int sConsole;
-	pthread_t inqThread, servThread, imgThread;
+	pthread_t inqThread, servThread, imgThread, conThread;
 
-	sConsole = bindSocketUDP(63170, 0);
+	
 
 	pthread_create(&inqThread, NULL, inquiryThread, NULL);
 	pthread_create(&servThread, NULL, serviceThread, NULL);
     pthread_create(&imgThread, NULL, imagesThread, NULL);
-    
+    pthread_create(&conThread, NULL, consoleThread, NULL);
+
     
     while(true) {
         if(cvWaitKey(10) == 27){
@@ -319,6 +466,8 @@ int main(int argc, char **argv)
 	pthread_join(inqThread, NULL);
 	pthread_join(servThread, NULL);
     pthread_join(imgThread, NULL);
+    pthread_join(conThread, NULL);
+
 
 	return 0;
 }
