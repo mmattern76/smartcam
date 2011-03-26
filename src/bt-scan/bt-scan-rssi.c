@@ -20,12 +20,130 @@
 #include <ctype.h>
 #include <bt-scan-rssi.h>
 #include <commands.h>
+#include <opencv/cv.h>
+#include <opencv/cxcore.h>
+#include <opencv/cvaux.h>
+#include <opencv/highgui.h>
 
 Inquiry_data inq_data;
 Configuration config;
-extern pthread_mutex_t inquiry_sem;
+extern pthread_mutex_t inquiry_sem, images_sem;
 extern int sd;
 extern struct sockaddr_in servaddr_service, servaddr_inquiry;
+
+IplImage *imgBackground;
+IplImage *imgDifference;
+IplImage *imgForegroundSmooth;
+IplImage *imgBinary;
+IplImage *imgResult;
+IplImage *imgCaptured;
+CvCapture *capture;
+
+void setBackground(){
+	printf("Shooting for background ...\n");
+	// Get the background
+	imgCaptured = cvQueryFrame(capture);
+
+	printf("got background\n");
+	if(imgCaptured == NULL){
+		perror("background == NULL");
+		exit(1);
+	}
+
+	imgBackground = cvCloneImage(imgCaptured);
+
+	// Save the frames into a file
+	cvSaveImage("background.jpg", imgBackground, NULL);
+}
+
+void changeDetection(){
+	int i,j;
+	char imageName[255];
+
+	printf("Change detection...\n");
+	// Get the foreground
+	imgCaptured = cvQueryFrame(capture);
+
+	printf("got foreground\n");
+	if(imgCaptured == NULL){
+		perror("foreground == NULL");
+		exit(1);
+	}
+
+	imgDifference = cvCloneImage(imgCaptured);
+
+	// Save the frames into a file
+	cvSaveImage("foreground.jpg", imgDifference, NULL);
+
+	imgResult = cvCreateImage(cvSize(imgBackground->width, imgBackground->height), imgBackground->depth, imgBackground->nChannels);
+	imgForegroundSmooth = cvCreateImage(cvSize(imgDifference->width, imgDifference->height), imgDifference->depth, imgDifference->nChannels);
+	imgBinary = cvCreateImage(cvSize(imgBackground->width, imgBackground->height), imgBackground->depth, 1);
+
+
+	// Filtro passa basso: elimina le alte frequenze che contengono tipicamente il rumore
+	// 3 indica la dimensione del filtro: più è grande e più l'immagine risulta sfocata
+	cvSmooth(imgBackground, imgBackground, CV_GAUSSIAN, 3, 3, 0, 0);
+	cvSmooth(imgDifference, imgForegroundSmooth, CV_GAUSSIAN, 3, 3, 0, 0);
+
+
+	// Per ogni punto dell'immagine calcola la distanza euclidea del colore rispetto al background
+	// In pratica si usa il teorema di pitagora in uno spazio a 3 dimensioni (RGB)
+	// Alla fine ottengo l'immagine binaria con i soli punti cambiati
+	for (i = 0; i < imgBackground->height; i++)
+		for (j = 0; j < imgBackground->width; j++) {
+			double color_dist = sqrt(
+					pow ( CV_IMAGE_ELEM(imgBackground, unsigned char, i, j*3) -
+							CV_IMAGE_ELEM(imgForegroundSmooth, unsigned char, i, j*3), 2)
+							+
+							pow ( CV_IMAGE_ELEM(imgBackground, unsigned char, i, j*3 +1) -
+									CV_IMAGE_ELEM(imgForegroundSmooth, unsigned char, i, j*3 +1), 2)
+									+
+									pow ( CV_IMAGE_ELEM(imgBackground, unsigned char, i, j*3 +2) -
+											CV_IMAGE_ELEM(imgForegroundSmooth, unsigned char, i, j*3 +2), 2)
+
+			);
+
+			CV_IMAGE_ELEM(imgBinary, unsigned char, i, j) = (color_dist > config.color_threshold) ? 255 : 0;
+		}
+
+
+	// A questo punto faccio qualche elaborazione sull'immagine binaria
+
+	IplConvKernel* struct_element;
+
+	// Questa operazione toglie tutti i gruppi di pixel dello sfondo che sono più piccoli di un cerchio di diametro 5 pixel
+	// Solitamente sono dovuti al rumore, visto che una persona è molto più grande
+	struct_element = cvCreateStructuringElementEx(5, 5, 2, 2, CV_SHAPE_ELLIPSE, NULL);
+	cvMorphologyEx(imgBinary, imgBinary, NULL, struct_element, CV_MOP_OPEN, 1);
+
+	// Questa operazione è il duale e toglie invece tutti i "buchi" dall'oggetto
+	struct_element = cvCreateStructuringElementEx(21, 21, 10, 10, CV_SHAPE_ELLIPSE, NULL);
+	cvMorphologyEx(imgBinary, imgBinary, NULL, struct_element, CV_MOP_CLOSE, 1);
+
+	cvAddS(imgDifference, cvScalarAll(0), imgResult, imgBinary);
+
+	CvMemStorage *mem;
+	CvSeq	 *contours, *ptr;
+
+	// Cerco i contorni esterni nell'immagine binaria e li disegno sull'immagine originale con dei colori casuali
+	// Ogni oggetto distinto ha un colore diverso
+	mem = cvCreateMemStorage(0);
+	cvFindContours(imgBinary, mem, &contours, sizeof(CvContour), CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+
+	for (ptr = contours; ptr != NULL; ptr = ptr->h_next) {
+		CvScalar color = CV_RGB( rand()&255, rand()&255, rand()&255 );
+		cvDrawContours(imgDifference, ptr, color, CV_RGB(0,0,0), -1, 2, 8, cvPoint(0,0));
+	}
+
+	sprintf(imageName, "../data/images/%s.jpeg", config.id_gumstix);
+	pthread_mutex_lock(&images_sem);
+	cvSaveImage(imageName, imgDifference, NULL);
+	pthread_mutex_unlock(&images_sem);
+
+	cvReleaseImage(&imgBinary);
+	cvReleaseImage(&imgResult);
+	cvReleaseImage(&imgForegroundSmooth);
+}
 
 int compareDevices(const void* a, const void* b){
 	Device *d1 = (Device*) a;
@@ -66,13 +184,25 @@ void* executeInquire(void * args){
 
 	inquiry_info *ii;
 	Inquiry_data temp;
-	char numDev[5];
+	char numDev[5], imageName[255];
 	int i, dev_id, sock, len, flags, num_rsp;
 	char name[NAME_LEN] = { 0 };
 	uint16_t handle;
 	unsigned int ptype;
 	struct hci_conn_info_req *cr;
 	int8_t rssi;
+
+	// Camera initialization
+	capture = cvCaptureFromCAM(0);
+
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 640);
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 480);
+
+	cvWaitKey(5000);
+
+	setBackground();
+
+	// BT initialization
 
 	dev_id = hci_get_route(NULL);
 	sock = hci_open_dev( dev_id );
@@ -151,7 +281,14 @@ void* executeInquire(void * args){
 		inq_data = temp;
 		pthread_mutex_unlock(&inquiry_sem);
 
-		if(config.auto_send && inq_data.num_devices > 0){
+
+		// If nobody is near the camera, update background
+		if(inq_data.num_devices == 0){
+			//changeDetection();
+			setBackground();
+		}
+
+		if(config.auto_send_inquiry && inq_data.num_devices > 0){
 			printf("Sending inquiry data to server ...\n");
 			sendInquiryData(sd, &servaddr_inquiry, inq_data);
 		}
@@ -160,13 +297,16 @@ void* executeInquire(void * args){
 			printf("Sending alarm to server ...\n");
 			sprintf(numDev, "%d", inq_data.num_devices);
 			sendCommand(sd, &servaddr_service, ALARM, numDev);
-			//sendImage("../data/images/lena.bmp-inv.jpeg");
+			changeDetection();
+			sprintf(imageName, "../data/images/%s.jpeg", config.id_gumstix);
+			sendImage(imageName);
 		}
 	}
 
 	free(ii);
 	free(cr);
 	close( sock );
+	cvReleaseCapture(&capture);
 	return 0;
 
 }

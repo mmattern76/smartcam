@@ -14,7 +14,7 @@ extern Inquiry_data inq_data;
 extern Configuration config;
 
 pthread_t btscan_thread, alive_thread;
-pthread_mutex_t inquiry_sem;
+pthread_mutex_t inquiry_sem, images_sem;
 struct sockaddr_in servaddr_console, servaddr_service, servaddr_inquiry, servaddr_images;
 int sd;
 
@@ -69,7 +69,11 @@ int initParameter(int argc, char** argv) {
 	strcpy(config.id_gumstix, "Gumstix");
 	config.alarm_threshold = 1;
 	config.scan_lenght = 8;
-	config.auto_send = true;
+	config.auto_send_inquiry = true;
+	config.auto_send_images = true;
+	config.color_threshold = 40;
+	config.image_width = 640;
+	config.image_height = 480;
 
 	// i parametri seguiti da : richiedono un argomento obbligatorio
 	while ((c = getopt(argc, argv, "hn:a:l:s:")) != -1)
@@ -180,8 +184,9 @@ int main(int argc, char** argv) {
 
 	sendImage("../data/images/lena.bmp-inv.jpeg");
 
-	// Initialize semaphore
+	// Initialize semaphores
 	pthread_mutex_init(&inquiry_sem, NULL);
+	pthread_mutex_init(&images_sem, NULL);
 
 	// Create alive thread
 	pthread_create(&alive_thread, NULL, alive, NULL);
