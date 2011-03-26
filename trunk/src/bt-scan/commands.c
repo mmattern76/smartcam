@@ -41,7 +41,7 @@ int bindSocketUDP(int localPort, int timeoutSeconds){
 
 }
 
-int sendCommand(int sd, struct sockaddr_in* destinationaddr, int id_command, char* param){
+int sendCommand(int sd, struct sockaddr_in* destinationaddr, enum cmd_id id_command, char* param){
 	// Send command id_command to destinationaddr through sd socket
 
 	Command command;
