@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -19,9 +20,38 @@
 #define true 1
 #define MAX_GUMSTIX 10
 
-pthread_mutex_t inquiry_sem;
+#define LOG_FILE_NAME "log.txt"
+
+pthread_mutex_t inquiry_sem, log_sem;
 int num_gumstix = 0;
 Gumstix gumstix[MAX_GUMSTIX];
+
+
+void printl( const char* format, ... ) {
+// Print on log file
+    
+    FILE *log_fd;
+    
+    pthread_mutex_lock(&log_sem);
+    if ((log_fd = fopen(LOG_FILE_NAME, "a")) == NULL)
+    {
+        printf("Error: can't open log file");
+        exit(1);
+    }
+    
+    // volendo qui con fprintf si possono stampare altre info, ad esempio un orario ?
+    
+    va_list args;
+    va_start( args, format );
+    vfprintf( log_fd, format, args );
+    va_end( args );
+        
+    fclose(log_fd);
+    
+    pthread_mutex_unlock(&log_sem);
+
+
+}
 
 
 void printDevices(Inquiry_data inq_data){
@@ -35,7 +65,7 @@ void printDevices(Inquiry_data inq_data){
 	strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
 
 	for(i = 0; i < inq_data.num_devices; i++){
-		printf("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
+		printl( "\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
 				inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
 	}
 }
@@ -52,7 +82,7 @@ void printGumstix(){
 		nowtime = gumstix[i].lastseen.tv_sec;
 		nowtm = localtime(&nowtime);
 		strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
-		printf("Gumstix: %s (%s:%s) - lastseen: %s\n", gumstix[i].id_gumstix, ipaddr, port, tmbuf);
+		printl("Gumstix: %s (%s:%s) - lastseen: %s\n", gumstix[i].id_gumstix, ipaddr, port, tmbuf);
 		printDevices(gumstix[i].lastInquiry);
 	}
 }
@@ -106,14 +136,14 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
 			// Error: trying to add a Gumstix with same id
 			// and different IP address
 			sendCommand(socket, &gumstix_addr, HELLO_ERR, "Id exists");
-			printf("Error: name already exists - %s\n", id_gumstix);
+			printl("Error: name already exists - %s\n", id_gumstix);
 		}
 		else {
 			// Already known: this is a new Hello from
 			// the same Gumstix
 			gettimeofday(&temp->lastseen, NULL);
 			sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
-			printf("Sent hello ack to %s\n", id_gumstix);
+			printl("Sent hello ack to %s\n", id_gumstix);
 		}
 	}
 	else { 
@@ -125,8 +155,8 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
 		num_gumstix++;
 
 		sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
-		printf("Sent hello ack to %s\n", id_gumstix);
-		printf("Added new Gumstix: %s\n", id_gumstix);
+		printl("Sent hello ack to %s\n", id_gumstix);
+		printl("Added new Gumstix: %s\n", id_gumstix);
 		printGumstix();
 	}
 }
@@ -184,7 +214,7 @@ void* imagesThread(void* arg){
 	if (listen(listen_sd, 5)<0)
 	{perror("listen"); exit(1);}
 	
-	printf("Images thread ready ...\n");
+	printl("Images thread ready ...\n");
 
 	while(true){
 		len=sizeof(gumstixaddr);
@@ -203,7 +233,7 @@ void* imagesThread(void* arg){
 			continue;
 		}
 		
-		printf("Gumstix %s is sending an image ...\n", temp->id_gumstix);
+		printl("Gumstix %s is sending an image ...\n", temp->id_gumstix);
 		sprintf(buf, "%s.jpeg", temp->id_gumstix);
 		img_fd = open(buf, O_CREAT | O_WRONLY, S_IRWXU);
 
@@ -211,16 +241,16 @@ void* imagesThread(void* arg){
 		// read image lenght
 		read(conn_sd, &img_len, sizeof(img_len));
 		img_len = ntohl(img_len);
-		printf("Received image size: %d\n", img_len);
+		printl("Received image size: %d\n", img_len);
 
-		printf("Receiving image ...\n");
+		printl("Receiving image ...\n");
 		byte_read = 0;
 		while(byte_read < img_len){
 			len = read(conn_sd, buf, sizeof(char) * 1024);
 			write(img_fd, buf, len);
 			byte_read += len;
 		}
-		printf("Received image.\n");
+		printl("Received image.\n");
 		close(img_fd);
 
 		// close connection
@@ -246,7 +276,7 @@ void* serviceThread(void* arg){
 
 	sService = bindSocketUDP(63171, 0);
 	
-	printf("Service thread ready ...\n");
+	printl("Service thread ready ...\n");
 
 	while(true){
 		command = receiveCommand(sService, &gumstixaddr);
@@ -255,20 +285,20 @@ void* serviceThread(void* arg){
 
 		case HELLO:
 			getnameinfo((struct sockaddr*)&gumstixaddr, sizeof(struct sockaddr_in), ipaddr, sizeof(ipaddr), port, sizeof(port), 0);
-			printf("Service thread: received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
+			printl("Service thread: received Hello from %s (%s:%s)\n", command.param, ipaddr, port);
 			addGumstix(command.param, gumstixaddr, sService);
 			break;
 		case ALIVE:
 			updateLastseen(&gumstixaddr);
-			printf("Service thread: alive received from %s\n", command.param);
+			printl("Service thread: alive received from %s\n", command.param);
 			break;
 		case ALARM:
 			updateLastseen(&gumstixaddr);
 			temp = findGumstixByAddr(&gumstixaddr);
-			printf("Service thread: alarm received from %s. Num devices: %s\n", temp->id_gumstix, command.param);
+			printl("Service thread: alarm received from %s. Num devices: %s\n", temp->id_gumstix, command.param);
 			break;
 		default:
-			printf("Service thread: command not valid ...\n");
+			printl("Service thread: command not valid ...\n");
 		}
 	}
 }
@@ -283,12 +313,12 @@ void* inquiryThread(void* arg){
 
 	sInquiry = bindSocketUDP(63172, 0);
 	
-	printf("Inquiry thread ready ...\n");
+	printl("Inquiry thread ready ...\n");
 
 	while(true){
 		inq_data = receiveInquiryData(sInquiry, &gumstixaddr);
 		temp = findGumstixByAddr(&gumstixaddr);
-		printf("Received inquiry from %s:\n", temp->id_gumstix);
+		printl("Received inquiry from %s:\n", temp->id_gumstix);
 		if(temp != NULL){
 			temp->lastInquiry = inq_data;
 		}
@@ -328,21 +358,18 @@ void* consoleThread(void* arg){
 	
     int sConsole;
     char cmd_string[255];
-    
     char delims[] = " ";
     char *cmd_name = NULL;
     char *cmd_target = NULL;
     char *cmd_param_name = NULL;
     char *cmd_param_value = NULL;    
     enum cmd_id command_id;
-    
     Command gumstix_answer;
-    
 	Gumstix* target;
     
 	sConsole = bindSocketUDP(63170, 0);
-	
-	printf("Console thread ready ...\n");
+	printl( "Console thread ready ...\n");
+    printf("Server console:\n");
     
 	while(true){
         printf("> ");
@@ -373,12 +400,18 @@ void* consoleThread(void* arg){
         
         // Comandi che scambiano dati con le gumstix
         cmd_target = strtok( NULL, delims );
-        target = findGumstixById(cmd_target);
+        if (cmd_target == NULL) {
+            printf("Invalid command\n");
+            continue;
+        }
         
-//        if (target == NULL) {
-//            printf("Error for command %s: can't find the following gumstix id: %s\n", cmd_name, cmd_target);
-//            continue;
-//        }
+        target = findGumstixById(cmd_target);
+  
+        if (target == NULL) {
+            printf("Error for command %s: can't find the following gumstix id: %s\n", cmd_name, cmd_target);
+            continue;
+        }
+        
         
         
         if (!strcasecmp(cmd_name, "get")) {
@@ -446,11 +479,13 @@ void* consoleThread(void* arg){
 
 int main(int argc, char **argv)
 {
-	pthread_t inqThread, servThread, imgThread, conThread;
-
-	
-
-	pthread_create(&inqThread, NULL, inquiryThread, NULL);
+    
+    printl("\nStarting program ...\n");
+    
+    pthread_mutex_init(&log_sem, NULL);
+    
+    pthread_t inqThread, servThread, imgThread, conThread;
+    pthread_create(&inqThread, NULL, inquiryThread, NULL);
 	pthread_create(&servThread, NULL, serviceThread, NULL);
     pthread_create(&imgThread, NULL, imagesThread, NULL);
     pthread_create(&conThread, NULL, consoleThread, NULL);
@@ -462,7 +497,7 @@ int main(int argc, char **argv)
 		}
     }
 
-
+    
 	pthread_join(inqThread, NULL);
 	pthread_join(servThread, NULL);
     pthread_join(imgThread, NULL);
