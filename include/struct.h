@@ -14,8 +14,6 @@
 #define NAME_LEN 248
 #define GUMSTIX_NAME_LEN 11
 
-#define ISALIVE(gumstix, nowtime) ((nowtime.tv_sec - gumstix.lastseen.tv_sec) < 30)
-
 typedef struct{
 	char id_gumstix[GUMSTIX_NAME_LEN];
 	int alarm_threshold;

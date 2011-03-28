@@ -33,7 +33,7 @@ int bindSocketUDP(int localPort, int timeoutSeconds){
 	/* BIND SOCKET, a una porta scelta dal sistema --------------- */
 	if(bind(sd,(struct sockaddr *) &localaddr, sizeof(localaddr))<0)
 	{perror("bind socket "); exit(1);}
-    // printf("Bind socket ok, alla porta %i\n", localPort);
+    // printl("Bind socket ok, alla porta %i\n", localPort);
 	if(timeoutSeconds > 0)
 		setsockopt (sd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
