@@ -19,7 +19,7 @@
 
 #define true 1
 #define MAX_GUMSTIX 10
-
+#define CONSOLE_SOCKET_TIMEOUT 5
 #define LOG_FILE_NAME "log.txt"
 
 pthread_mutex_t inquiry_sem, log_sem;
@@ -61,13 +61,11 @@ void printl( const char* format, ... ) {
 
 void printDevices(Inquiry_data inq_data){
 	int i;
-	time_t nowtime;
-	struct tm *nowtm;
-	char tmbuf[64];
-
-	nowtime = inq_data.timestamp.tv_sec;
-	nowtm = localtime(&nowtime);
-	strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
+	
+	if(inq_data.num_devices == 0){
+		printf("\tNo known devices ...\n");
+		return;
+	}
 
 	for(i = 0; i < inq_data.num_devices; i++){
 		printl( "\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
@@ -337,8 +335,7 @@ enum cmd_id getCommandIdForParameter(char* param_name, int is_set) {
     }
     else if (!strcasecmp(param_name, "auto_send_images")) {
         return is_set ? SET_AUTO_SEND_IMAGES : GET_AUTO_SEND_IMAGES;
-    }
-    
+    }    
     else if (!strcasecmp(param_name, "scan_length")) {
         return is_set ?  SET_SCAN_LENGTH : GET_SCAN_LENGTH;
     }
@@ -371,7 +368,7 @@ void* consoleThread(void* arg){
     Command gumstix_answer;
 	Gumstix* target;
     
-	sConsole = bindSocketUDP(63170, 10); // 10 sec timeout
+	sConsole = bindSocketUDP(63170, CONSOLE_SOCKET_TIMEOUT); // with timeout
 	printl( "Console thread ready ...\n");
     printf("Server console (try 'help' for commands):\n");
     
@@ -398,10 +395,13 @@ void* consoleThread(void* arg){
         cmd_name = strtok( cmd_string, delims );
         
         // Local commands
+		/******************** EXIT ********************/
 		if (!strcasecmp(cmd_name, "exit")) {
 			exit(0);
 		}
+		/**********************************************/
 		
+		/******************** LIST ********************/
         if (!strcasecmp(cmd_name, "list")) {
 			int isSomeoneAlive = 0;
 			for (i = 0; i < num_gumstix; i++) {
@@ -419,7 +419,9 @@ void* consoleThread(void* arg){
 			}
             continue;
         }
-        
+		/**********************************************/
+		
+        /******************** HELP ********************/
         if (!strcasecmp(cmd_name, "help")) {
             printf("\tAvailable commands:\n");
 			printf("\t\tlist - displays all available gumstixes id\n\n");
@@ -437,7 +439,7 @@ void* consoleThread(void* arg){
 			printf("\t\thelp - prints this help\n\n");	
 			continue;
         }
-        
+        /**********************************************/
         
         // Gumstix commands
         cmd_target = strtok( NULL, delims );
@@ -460,6 +462,7 @@ void* consoleThread(void* arg){
 					continue;
 		}       
         
+		/******************** GET *********************/
         if (!strcasecmp(cmd_name, "get")) {
             cmd_param_name = strtok( NULL, delims );
             
@@ -492,8 +495,9 @@ void* consoleThread(void* arg){
 
             continue;
         }
+		/*********************************************/
         
-        
+        /******************** SET ********************/
         if (!strcasecmp(cmd_name, "set")) {
             cmd_param_name = strtok( NULL, delims );
             cmd_param_value = strtok( NULL, delims );
@@ -503,8 +507,6 @@ void* consoleThread(void* arg){
                 continue;
             }
 			
-			// Controlliamo che siano degli interi?
-			            
             printf("\tSet %s to value: %s\n", cmd_param_name, cmd_param_value);
             
             command_id = getCommandIdForParameter(cmd_param_name, true);
@@ -526,6 +528,7 @@ void* consoleThread(void* arg){
 			
             continue;
         }
+		/*********************************************/
         
         printf("\tUnknown command: %s\n\tType 'help' for more information\n", cmd_name);
 	}
