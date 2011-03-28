@@ -8,16 +8,7 @@
 
 #define PARAM_LENGHT 11
 #define ALIVE_INTERVAL 10
-
-// Commands list
-//#define ERROR 0
-//#define HELLO 1
-//#define HELLO_ACK 2
-//#define HELLO_ERR 3
-//#define ALIVE 4
-//#define ALARM 5
-//#define SET_AUTO_SEND 6
-
+#define ISALIVE(gumstix, nowtime) ((nowtime.tv_sec - gumstix->lastseen.tv_sec) < ALIVE_INTERVAL * 3)
 
 enum cmd_id {
     ERROR,

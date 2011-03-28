@@ -14,8 +14,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+/* #include <opencv/cv.h>
+#include <opencv/highgui.h>*/
 
 #define true 1
 #define MAX_GUMSTIX 10
@@ -26,33 +26,38 @@ pthread_mutex_t inquiry_sem, log_sem;
 int num_gumstix = 0;
 Gumstix gumstix[MAX_GUMSTIX];
 
-
 void printl( const char* format, ... ) {
-// Print on log file
+	// Print on log file
     
-    FILE *log_fd;
+    time_t nowtime;
+	struct timeval now;
+	struct tm *nowtm;
+	char tmbuf[64];
+	FILE *log_fd;
+	
+	gettimeofday(&now, NULL);
+	nowtime = now.tv_sec;
+	nowtm = localtime(&nowtime);
+	strftime(tmbuf, sizeof(tmbuf), "[%d-%m-%Y %H:%M:%S]\t", nowtm);
     
     pthread_mutex_lock(&log_sem);
     if ((log_fd = fopen(LOG_FILE_NAME, "a")) == NULL)
     {
         printf("Error: can't open log file");
         exit(1);
-    }
-    
-    // volendo qui con fprintf si possono stampare altre info, ad esempio un orario ?
+    } 
     
     va_list args;
     va_start( args, format );
+	fprintf(log_fd, "%s", tmbuf);
     vfprintf( log_fd, format, args );
     va_end( args );
-        
+	
     fclose(log_fd);
     
-    pthread_mutex_unlock(&log_sem);
-
-
+    pthread_mutex_unlock(&log_sem);	
+	
 }
-
 
 void printDevices(Inquiry_data inq_data){
 	int i;
@@ -169,17 +174,17 @@ void updateLastseen(struct sockaddr_in* gumstix_addr){
 	}
 }
 
-void displayImage(char *file_name, char *window_name) {
-    IplImage *img;
+/* void displayImage(char *file_name, char *window_name) {
+	IplImage *img;
 
-    // Display Image
-    cvNamedWindow(window_name, CV_WINDOW_AUTOSIZE);
-    
-    img = cvLoadImage(file_name, CV_LOAD_IMAGE_COLOR);
-    cvShowImage(window_name, img);
-    
-    cvReleaseImage(&img);
-}
+	// Display Image
+	cvNamedWindow(window_name, CV_WINDOW_AUTOSIZE);
+	
+	img = cvLoadImage(file_name, CV_LOAD_IMAGE_COLOR);
+	cvShowImage(window_name, img);
+	
+	cvReleaseImage(&img);
+} */
 
 
 
@@ -256,9 +261,6 @@ void* imagesThread(void* arg){
 		// close connection
 		close(conn_sd);
         sprintf(buf, "%s.jpeg", temp->id_gumstix);
-        
-        displayImage(buf, temp->id_gumstix);
-
 	}
 
 	close(listen_sd);
@@ -356,88 +358,138 @@ enum cmd_id getCommandIdForParameter(char* param_name, int is_set) {
 void* consoleThread(void* arg){
 	// This thread manages the interaction with the user 
 	
-    int sConsole;
+    int sConsole, i;
     char cmd_string[255];
+	char cmd_temp[255];
     char delims[] = " ";
     char *cmd_name = NULL;
     char *cmd_target = NULL;
     char *cmd_param_name = NULL;
     char *cmd_param_value = NULL;    
     enum cmd_id command_id;
+	struct timeval now;
     Command gumstix_answer;
 	Gumstix* target;
     
-	sConsole = bindSocketUDP(63170, 0);
+	sConsole = bindSocketUDP(63170, 10); // 10 sec timeout
 	printl( "Console thread ready ...\n");
-    printf("Server console:\n");
+    printf("Server console (try 'help' for commands):\n");
     
 	while(true){
+		
         printf("> ");
 
+		memset(cmd_temp, 0, 255);
         memset(cmd_string, 0, 255);
         
-        if (gets(cmd_string) == NULL) {
+        if (fgets(cmd_temp, 255, stdin) == NULL) { // Buffer overflow safe
             continue;
         }
+		
+		strncpy(cmd_string, cmd_temp, strlen(cmd_temp) - 1); // Delete \n
         
         if (strlen(cmd_string) == 0) {
             continue;
         }
+		
+		// Get timestamp
+		gettimeofday(&now, NULL);
         
         cmd_name = strtok( cmd_string, delims );
         
-        // Comandi che agiscono localmente al server
+        // Local commands
+		if (!strcasecmp(cmd_name, "exit")) {
+			exit(0);
+		}
+		
         if (!strcasecmp(cmd_name, "list")) {
-            printf("Stampo la lista di tutti le gumstix\n");
+			int isSomeoneAlive = 0;
+			for (i = 0; i < num_gumstix; i++) {
+				Gumstix *temp = &gumstix[i];
+				if(ISALIVE(temp, now)){
+					if(!isSomeoneAlive){
+						printf("\tAvailable gumstixes:\n");
+						isSomeoneAlive = 1;
+					}
+					printf("\t\t%s\n", gumstix[i].id_gumstix);
+				}
+			}
+			if (!isSomeoneAlive) {
+				printf("\t No available gumstixes.\n");
+			}
             continue;
         }
         
         if (!strcasecmp(cmd_name, "help")) {
-            printf("Stampo la lista di tutti i comandi validi\n");
-            continue;
+            printf("\tAvailable commands:\n");
+			printf("\t\tlist - displays all available gumstixes id\n\n");
+			printf("\t\tSET <gumstix_id> <param_name> <param_value>\n\n");
+			printf("\t\tGET <gumstix_id> <param_name>\n\n");
+			printf("\t\t\t<gumstix_id>:\n"); 
+			printf("\t\t\t\tgumstix id got from 'list'\n\n");
+			printf("\t\t\t<param_name>:\n");
+			printf("\t\t\t\tIMAGE (get only) - get last image from gumstix\n");
+			printf("\t\t\t\tINQUIRY (get only) - get last bluetooth inquiry data from gumstix\n");
+			printf("\t\t\t\tAUTO_SEND_INQUIRY (get/set) - auto send inquiries\n");
+			printf("\t\t\t\tAUTO_SEND_IMAGES (get/set) - auto send images\n");
+			printf("\t\t\t\tSCAN_LENGTH (get/set) - bluetooth scan lenght (value * 1,26)\n\n");
+			printf("\t\texit - exit program\n\n");	
+			printf("\t\thelp - prints this help\n\n");	
+			continue;
         }
         
         
-        // Comandi che scambiano dati con le gumstix
+        // Gumstix commands
         cmd_target = strtok( NULL, delims );
         if (cmd_target == NULL) {
-            printf("Invalid command\n");
+            printf("\tUnknown command: %s\n\tType 'help' for more information\n", cmd_name);
             continue;
         }
         
         target = findGumstixById(cmd_target);
   
         if (target == NULL) {
-            printf("Error for command %s: can't find the following gumstix id: %s\n", cmd_name, cmd_target);
+            printf("\tError for command %s: can't find the following gumstix id: %s\n", cmd_name, cmd_target);
+			printf("\tTry 'list' to get all available gumstixes\n");
             continue;
         }
         
-        
+		// Check if target is alive
+		if(!ISALIVE(target, now)){
+					printf("\tGumstix %s is not alive. Try 'list' to get all available gumstixes\n", cmd_target);
+					continue;
+		}       
         
         if (!strcasecmp(cmd_name, "get")) {
             cmd_param_name = strtok( NULL, delims );
             
             if (cmd_param_name == NULL) {
-                printf("Syntax error: get gumstix_id param_name\n");
+                printf("\tSyntax error: get gumstix_id param_name\n");
                 continue;
             }
             
-            printf("Get %s\n", cmd_param_name);
+            printf("\tGet %s\n", cmd_param_name);
             
             command_id = getCommandIdForParameter(cmd_param_name, false);
             if (command_id == ERROR) {
-                printf("Unknown parameter: %s\n", cmd_param_name);
+                printf("\tUnknown <param_name>: %s\n", cmd_param_name);
                 continue;
             }
             
-            printf("OK: invio il comando per richiedere il valore del parametro\n");
-            // sendCommand(sConsole, &target->addr, command_id, "");
+            printf("\tSending command to %s\n", target->id_gumstix);
+            sendCommand(sConsole, &target->addr, command_id, "");
             
             if (command_id != GET_IMAGE) {
-                // gumstix_answer = receiveCommand(sConsole, &target->addr);
-                // printf("%s: %s", cmd_param_name, gumstix_answer.param);
-                printf("Qui stampo la risposta\n");
-            }
+                gumstix_answer = receiveCommand(sConsole, &target->addr);
+				if (gumstix_answer.id_command != PARAM_VALUE) {
+					printf("\tError while getting parameter: %s\n", cmd_param_name);
+				}else {
+					printf("\t%s: %s", cmd_param_name, gumstix_answer.param);
+				}
+			}else {
+				printf("\tReceiving image ...\n");
+			}
+
             continue;
         }
         
@@ -447,40 +499,44 @@ void* consoleThread(void* arg){
             cmd_param_value = strtok( NULL, delims );
             
             if (cmd_param_name == NULL || cmd_param_value == NULL) {
-                printf("Syntax error: set gumstix_id param_name param_value\n");
+                printf("\tSyntax error: set gumstix_id param_name param_value\n");
                 continue;
             }
-            
-            printf("Set %s to value: %s\n", cmd_param_name, cmd_param_value);
+			
+			// Controlliamo che siano degli interi?
+			            
+            printf("\tSet %s to value: %s\n", cmd_param_name, cmd_param_value);
             
             command_id = getCommandIdForParameter(cmd_param_name, true);
             if (command_id == ERROR) {
-                printf("Parameter is unknown or unsettable: %s\n", cmd_param_name);
+                printf("\t<param_name> is unknown or unsettable: %s\n", cmd_param_name);
                 continue;
             }
             
-            printf("OK: invio il comando per modificare il parametro\n");
-            // sendCommand(sConsole, &target->addr, command_id, cmd_param_value);
+            printf("\tSending command to %s\n", target->id_gumstix);
+            sendCommand(sConsole, &target->addr, command_id, cmd_param_value);
             
-            // Lo mettiamo un ACK?
-            /*
+            // Receiving ACK
             gumstix_answer = receiveCommand(sConsole, &target->addr);
             if (gumstix_answer.id_command != PARAM_ACK ) {
-                printf("Error while setting parameter: %s\n", cmd_param_name);
-            }
-             */
+                printf("\tError while setting parameter: %s\n", cmd_param_name);
+            }else {
+				printf("\tOK\n");
+			}
+			
             continue;
         }
         
-        printf("Unknown command: %s\nType 'help' for more information\n", cmd_name);
+        printf("\tUnknown command: %s\n\tType 'help' for more information\n", cmd_name);
 	}
 }
 
 
 int main(int argc, char **argv)
 {
-    
-    printl("\nStarting program ...\n");
+		
+	printl("\n");
+    printl("Starting program ...\n");
     
     pthread_mutex_init(&log_sem, NULL);
     
@@ -489,14 +545,6 @@ int main(int argc, char **argv)
 	pthread_create(&servThread, NULL, serviceThread, NULL);
     pthread_create(&imgThread, NULL, imagesThread, NULL);
     pthread_create(&conThread, NULL, consoleThread, NULL);
-
-    
-    while(true) {
-        if(cvWaitKey(10) == 27){
-			cvDestroyAllWindows();
-		}
-    }
-
     
 	pthread_join(inqThread, NULL);
 	pthread_join(servThread, NULL);
