@@ -313,7 +313,6 @@ void* executeInquire(void * args){
 		// If nobody is near the camera, update background
 		if(inq_data.num_devices == 0){
 			//changeDetection();
-			// Set new preferred resolution
 			setBackground();
 		}
 
@@ -339,7 +338,7 @@ void* executeInquire(void * args){
 			sendCommand(sd, &servaddr_service, ALARM, numDev);
 		}
 
-		sleep(temp_config.scan_interval * 1000);
+		sleep(temp_config.scan_interval);
 	}
 
 	free(ii);

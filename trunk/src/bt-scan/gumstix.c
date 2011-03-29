@@ -75,7 +75,7 @@ int initParameter(int argc, char** argv) {
 	config.scan_interval = 0;
 	config.auto_send_inquiry = true;
 	config.auto_send_images = true;
-	config.color_threshold = 40;
+	config.color_threshold = 50;
 	config.image_width = 640;
 	config.image_height = 480;
 	force_send_image = false;
@@ -328,43 +328,6 @@ int main(int argc, char** argv) {
 			printf("SET_AUTO_SEND_IMAGES: %s\n", config.auto_send_images ? "true" : "false");
 			break;
 
-//		case SET_IMAGE_RESOLUTION:
-//			printf("Received SET_IMAGE_RESOLUTION (value: %s) from server\n", command.param);
-//			answer.id_command = PARAM_ACK;
-//			// Normalizing resolution
-//			buf = strtok(command.param, "x");
-//			width = atoi(buf);
-//			buf = strtok(NULL, "x");
-//			height = atoi(buf);
-//			if(width >= 0 && width <= 320){
-//				width = 320;
-//				height = 240;
-//			}else if(width > 320 && width <= 640){
-//				width = 640;
-//				height = 480;
-//			}else if(width > 640 && width <= 1024){
-//				width = 1024;
-//				height = 768;
-//			}else if(width > 1024 && width <= 1280){
-//				width = 1280;
-//				height = 1024;
-//			}else if(width > 1280 && width <= 1600){
-//				width = 1600;
-//				height = 1200;
-//			}else if(width > 1600 && width <= 2048){
-//				width = 2048;
-//				height = 1536;
-//			}else{ // default
-//				width = 640;
-//				height = 480;
-//			}
-//			pthread_mutex_lock(&config_sem);
-//			config.image_width = width;
-//			config.image_height = height;
-//			pthread_mutex_unlock(&config_sem);
-//			printf("SET_IMAGE_RESOLUTION: %dx%d\n", config.image_width, config.image_height);
-//			break;
-
 		case SET_SCAN_INTERVAL:
 			printf("Received SET_SCAN_INTERVAL (value: %s) from server\n", command.param);
 			answer.id_command = PARAM_ACK;
@@ -406,7 +369,7 @@ int main(int argc, char** argv) {
 			answer.id_command = PARAM_ACK;
 			color_threshold = atoi(command.param);
 			if(color_threshold < 1 || color_threshold > 100)
-				color_threshold = 40; // default
+				color_threshold = 50; // default
 			pthread_mutex_lock(&config_sem);
 			config.color_threshold = color_threshold;
 			pthread_mutex_unlock(&config_sem);
