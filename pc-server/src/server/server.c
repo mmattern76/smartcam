@@ -152,6 +152,7 @@ void addGumstix(char* id_gumstix, struct sockaddr_in gumstix_addr, int socket){
 			// the same Gumstix
 			gettimeofday(&temp->lastseen, NULL);
 			sendCommand(socket, &gumstix_addr, HELLO_ACK, "");
+            temp->addr = gumstix_addr;
 			printl("Sent hello ack to %s\n", id_gumstix);
 		}
 	}
@@ -282,7 +283,7 @@ void* serviceThread(void* arg){
 			break;
 		case ALIVE:
 			updateLastseen(&gumstixaddr);
-			printl("Service thread: alive received from %s\n", command.param);
+			// printl("Service thread: alive received from %s\n", command.param);
 			break;
 		case ALARM:
 			updateLastseen(&gumstixaddr);
