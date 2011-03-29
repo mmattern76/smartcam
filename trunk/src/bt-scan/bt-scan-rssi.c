@@ -27,8 +27,8 @@
 
 Inquiry_data inq_data;
 Configuration config;
-extern pthread_mutex_t inquiry_sem, images_sem;
-extern int sd;
+extern pthread_mutex_t config_sem, images_sem;
+extern int sd, force_send_inquiry, force_send_image;
 extern struct sockaddr_in servaddr_service, servaddr_inquiry;
 
 IplImage *imgBackground;
@@ -39,12 +39,22 @@ IplImage *imgResult;
 IplImage *imgCaptured;
 CvCapture *capture;
 
+Configuration copyConfiguration(){
+	Configuration temp;
+
+	pthread_mutex_lock(&config_sem);
+	temp = config;
+	pthread_mutex_unlock(&config_sem);
+
+	return temp;
+}
+
 void setBackground(){
 	printf("Shooting for background ...\n");
 	// Get the background
 	imgCaptured = cvQueryFrame(capture);
 
-	printf("got background\n");
+	printf("Got background\n");
 	if(imgCaptured == NULL){
 		perror("background == NULL");
 		exit(1);
@@ -64,7 +74,7 @@ void changeDetection(){
 	// Get the foreground
 	imgCaptured = cvQueryFrame(capture);
 
-	printf("got foreground\n");
+	printf("Got foreground\n");
 	if(imgCaptured == NULL){
 		perror("foreground == NULL");
 		exit(1);
@@ -185,7 +195,7 @@ void* executeInquire(void * args){
 	inquiry_info *ii;
 	Inquiry_data temp;
 	char numDev[5], imageName[255];
-	int i, dev_id, sock, len, flags, num_rsp;
+	int i, dev_id, sock, flags, num_rsp;
 	char name[NAME_LEN] = { 0 };
 	uint16_t handle;
 	unsigned int ptype;
@@ -211,7 +221,6 @@ void* executeInquire(void * args){
 		exit(1);
 	}
 
-	len  = config.scan_lenght;
 	flags = IREQ_CACHE_FLUSH;
 
 	ii = (inquiry_info*)malloc(MAX_RISP * sizeof(inquiry_info));
@@ -223,6 +232,7 @@ void* executeInquire(void * args){
 	}
 
 	while(true){
+		Configuration temp_config = copyConfiguration();
 
 		gettimeofday(&temp.timestamp, NULL);
 
@@ -230,7 +240,7 @@ void* executeInquire(void * args){
 
 		printf("Scanning ...\n");
 
-		num_rsp = hci_inquiry(dev_id, len, MAX_RISP, NULL, &ii, flags);
+		num_rsp = hci_inquiry(dev_id, temp_config.scan_length, MAX_RISP, NULL, &ii, flags);
 		if( num_rsp < 0 ) perror("hci_inquiry");
 
 		for (i = 0; i < num_rsp && i < MAX_RISP; i++) {
@@ -277,30 +287,38 @@ void* executeInquire(void * args){
 		qsort(temp.devices, temp.num_devices, sizeof(Device), compareDevices);
 		printDevices(temp);
 
-		pthread_mutex_lock(&inquiry_sem);
+		// Save inq_data
 		inq_data = temp;
-		pthread_mutex_unlock(&inquiry_sem);
-
 
 		// If nobody is near the camera, update background
 		if(inq_data.num_devices == 0){
 			//changeDetection();
+			// Set new preferred resolution
+			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, temp_config.image_width);
+			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, temp_config.image_height);
+			printf("Setting new background image (%dx%d) ...\n", temp_config.image_width, temp_config.image_height);
 			setBackground();
 		}
 
-		if(config.auto_send_inquiry && inq_data.num_devices > 0){
+		if((temp_config.auto_send_inquiry || force_send_inquiry) && inq_data.num_devices > 0){
 			printf("Sending inquiry data to server ...\n");
 			sendInquiryData(sd, &servaddr_inquiry, inq_data);
+			force_send_inquiry = 0;
 		}
 
-		if(inq_data.num_devices > config.alarm_threshold){
+		if(inq_data.num_devices > temp_config.alarm_threshold){
 			printf("Sending alarm to server ...\n");
 			sprintf(numDev, "%d", inq_data.num_devices);
 			sendCommand(sd, &servaddr_service, ALARM, numDev);
 			changeDetection();
-			sprintf(imageName, "../data/images/%s.jpeg", config.id_gumstix);
-			sendImage(imageName);
+			sprintf(imageName, "../data/images/%s.jpeg", temp_config.id_gumstix);
+			if(temp_config.auto_send_images || force_send_image){
+				sendImage(imageName);
+				force_send_image = 0;
+			}
 		}
+
+		sleep(temp_config.scan_interval * 1000);
 	}
 
 	free(ii);

@@ -12,9 +12,6 @@
 #include <string.h>
 #include <commands.h>
 
-extern Configuration config;
-extern pthread_mutex_t inquiry_sem;
-
 int bindSocketUDP(int localPort, int timeoutSeconds){
 	// Binds a new socket to localPort with timeoutSeconds timeout
 
@@ -76,15 +73,11 @@ Command receiveCommand(int sd, struct sockaddr_in* sender){
 int sendInquiryData(int sd, struct sockaddr_in* destinationaddr, Inquiry_data inq){
 	// Send inquiry data to destinationaddr through sd socket
 
-	pthread_mutex_lock(&inquiry_sem);
-
 	if (sendto(sd, &inq, sizeof(inq), 0, (struct sockaddr *)destinationaddr, sizeof(struct sockaddr_in))<0)
 	{
 		perror("UDP socket error: sendInquiryData()");
 		return -1;
 	}
-
-	pthread_mutex_unlock(&inquiry_sem);
 
 	return 0;
 }
