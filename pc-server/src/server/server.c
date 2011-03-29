@@ -23,7 +23,7 @@
 #define CONSOLE_SOCKET_TIMEOUT 5
 #define LOG_FILE_NAME "log.txt"
 
-pthread_mutex_t inquiry_sem, log_sem;
+pthread_mutex_t log_sem;
 int num_gumstix = 0;
 Gumstix gumstix[MAX_GUMSTIX];
 
