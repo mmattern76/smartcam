@@ -18,6 +18,7 @@
 #include <opencv/highgui.h>*/
 
 #define true 1
+#define false 0
 #define MAX_GUMSTIX 10
 #define CONSOLE_SOCKET_TIMEOUT 5
 #define LOG_FILE_NAME "log.txt"
@@ -59,17 +60,24 @@ void printl( const char* format, ... ) {
 	
 }
 
-void printDevices(Inquiry_data inq_data){
+void printDevices(Inquiry_data inq_data, int write_log){
 	int i;
-	
+
 	if(inq_data.num_devices == 0){
-		printf("\tNo known devices ...\n");
+		if(write_log)
+			printl("\tNo known devices ...\n");
+		else
+			printf("\tNo known devices ...\n");
 		return;
 	}
 
 	for(i = 0; i < inq_data.num_devices; i++){
-		printl( "\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
-				inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
+		if(write_log)
+			printl("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
+					inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
+		else
+			printf("\t%d %s\t%s\t%d\n", i+1, inq_data.devices[i].bt_addr, inq_data.devices[i].name,
+					inq_data.devices[i].valid ? inq_data.devices[i].rssi : -999);
 	}
 }
 
@@ -86,7 +94,7 @@ void printGumstix(){
 		nowtm = localtime(&nowtime);
 		strftime(tmbuf, sizeof(tmbuf), "%d-%m-%Y %H:%M:%S", nowtm);
 		printl("Gumstix: %s (%s:%s) - lastseen: %s\n", gumstix[i].id_gumstix, ipaddr, port, tmbuf);
-		printDevices(gumstix[i].lastInquiry);
+		printDevices(gumstix[i].lastInquiry, true);
 	}
 }
 
@@ -323,7 +331,7 @@ void* inquiryThread(void* arg){
 			temp->lastInquiry = inq_data;
 		}
 
-		printDevices(inq_data);
+		printDevices(inq_data, true);
 	}
 }
 
@@ -335,7 +343,10 @@ enum cmd_id getCommandIdForParameter(char* param_name, int is_set) {
     }
     else if (!strcasecmp(param_name, "auto_send_images")) {
         return is_set ? SET_AUTO_SEND_IMAGES : GET_AUTO_SEND_IMAGES;
-    }    
+    }
+    else if (!strcasecmp(param_name, "image_resolution")) {
+            return is_set ? SET_IMAGE_RESOLUTION : GET_IMAGE_RESOLUTION;
+    }
     else if (!strcasecmp(param_name, "scan_length")) {
         return is_set ?  SET_SCAN_LENGTH : GET_SCAN_LENGTH;
     }
@@ -435,10 +446,11 @@ void* consoleThread(void* arg){
 			printf("\t\t\t<param_name>:\n");
 			printf("\t\t\t\tIMAGE (get only) - get last image from gumstix\n");
 			printf("\t\t\t\tINQUIRY (get only) - get last bluetooth inquiry data from gumstix\n");
-			printf("\t\t\t\tAUTO_SEND_INQUIRY (get/set) - auto send inquiries\n");
-			printf("\t\t\t\tAUTO_SEND_IMAGES (get/set) - auto send images\n");
-			printf("\t\t\t\tSCAN_INTERVAL (get/set) - seconds between two bluetooth scans\n");
-			printf("\t\t\t\tSCAN_LENGTH (get/set) - bluetooth scan lenght (value * 1,26)\n\n");
+			printf("\t\t\t\tAUTO_SEND_INQUIRY (get/set) - auto send inquiries (true/false)\n");
+			printf("\t\t\t\tAUTO_SEND_IMAGES (get/set) - auto send images (true/false)\n");
+			printf("\t\t\t\tIMAGE_RESOLUTION (get/set) - image resolution (es: 640x480)\n");
+			printf("\t\t\t\tSCAN_INTERVAL (get/set) - seconds between two bluetooth scans (0-100)\n");
+			printf("\t\t\t\tSCAN_LENGTH (get/set) - bluetooth scan lenght (value * 1,26) (0-10)\n\n");
 			printf("\t\texit - exit program\n\n");	
 			printf("\t\thelp - prints this help\n\n");	
 			continue;
@@ -501,7 +513,7 @@ void* consoleThread(void* arg){
 			}
 			
 			if (command_id == GET_INQUIRY) { // Show local last inquiry
-				printDevices(target->lastInquiry);
+				printDevices(target->lastInquiry, false);
 				continue;
 			}
 				
