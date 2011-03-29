@@ -80,7 +80,7 @@ void setBackground(){
 	imgBackground = cvCloneImage(imgCaptured);
 
 	// Save the frames into a file
-	cvSaveImage("background.jpg", imgBackground, NULL);
+	cvSaveImage("../data/images/background.jpg", imgBackground, NULL);
 }
 
 void changeDetection(){
@@ -103,7 +103,7 @@ void changeDetection(){
 	imgDifference = cvCloneImage(imgCaptured);
 
 	// Save the frames into a file
-	cvSaveImage("foreground.jpg", imgDifference, NULL);
+	cvSaveImage("../data/images/foreground.jpg", imgDifference, NULL);
 
 	imgResult = cvCreateImage(cvSize(imgBackground->width, imgBackground->height), imgBackground->depth, imgBackground->nChannels);
 	imgForegroundSmooth = cvCreateImage(cvSize(imgDifference->width, imgDifference->height), imgDifference->depth, imgDifference->nChannels);
@@ -225,8 +225,8 @@ void* executeInquire(void * args){
 	// Camera initialization
 	capture = cvCaptureFromCAM(0);
 
-	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 640);
-	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 480);
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, config.image_width);
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, config.image_height);
 
 	cvWaitKey(5000);
 
@@ -314,10 +314,6 @@ void* executeInquire(void * args){
 		if(inq_data.num_devices == 0){
 			//changeDetection();
 			// Set new preferred resolution
-//			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, temp_config.image_width);
-//			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, temp_config.image_height);
-//			printf("Setting new background image (%dx%d) ...\n", (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH),
-//																 (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT));
 			setBackground();
 		}
 
