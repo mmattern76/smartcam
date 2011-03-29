@@ -14,8 +14,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
-/* #include <opencv/cv.h>
-#include <opencv/highgui.h>*/
 
 #define true 1
 #define false 0
@@ -180,20 +178,6 @@ void updateLastseen(struct sockaddr_in* gumstix_addr){
 	}
 }
 
-/* void displayImage(char *file_name, char *window_name) {
-	IplImage *img;
-
-	// Display Image
-	cvNamedWindow(window_name, CV_WINDOW_AUTOSIZE);
-	
-	img = cvLoadImage(file_name, CV_LOAD_IMAGE_COLOR);
-	cvShowImage(window_name, img);
-	
-	cvReleaseImage(&img);
-} */
-
-
-
 void* imagesThread(void* arg){
 	// This thread receives images from Gumstixes
 
@@ -353,6 +337,12 @@ enum cmd_id getCommandIdForParameter(char* param_name, int is_set) {
 	else if (!strcasecmp(param_name, "scan_interval")) {
         return is_set ?  SET_SCAN_INTERVAL : GET_SCAN_INTERVAL;
     }
+	else if (!strcasecmp(param_name, "alarm_threshold")) {
+		return is_set ?  SET_ALARM_THRESHOLD : GET_ALARM_THRESHOLD;
+	}
+	else if (!strcasecmp(param_name, "color_threshold")) {
+		return is_set ?  SET_COLOR_THRESHOLD : GET_COLOR_THRESHOLD;
+	}
     else if (!strcasecmp(param_name, "image")) {
         return is_set ?  ERROR : GET_IMAGE;
     }
@@ -450,7 +440,9 @@ void* consoleThread(void* arg){
 			printf("\t\t\t\tAUTO_SEND_IMAGES (get/set) - auto send images (true/false)\n");
 			printf("\t\t\t\tIMAGE_RESOLUTION (get/set) - image resolution (es: 640x480)\n");
 			printf("\t\t\t\tSCAN_INTERVAL (get/set) - seconds between two bluetooth scans (0-100)\n");
-			printf("\t\t\t\tSCAN_LENGTH (get/set) - bluetooth scan lenght (value * 1,26) (0-10)\n\n");
+			printf("\t\t\t\tSCAN_LENGTH (get/set) - bluetooth scan lenght (value * 1,26) (1-10)\n");
+			printf("\t\t\t\tALARM_THRESHOLD (get/set) - min number of bluetooth devices to trigger the alarm (1-100)\n");
+			printf("\t\t\t\tCOLOR_THRESHOLD (get/set) - conditions change background detection (1-100)\n\n");
 			printf("\t\texit - exit program\n\n");	
 			printf("\t\thelp - prints this help\n\n");	
 			continue;
@@ -503,6 +495,7 @@ void* consoleThread(void* arg){
             gumstix_answer = receiveCommand(sConsole, NULL); // Not overwrite gumstix address
 			if (gumstix_answer.id_command != PARAM_VALUE) {
 				printf("\tError while getting parameter: %s\n", cmd_param_name);
+				continue;
 			}else {
 				printf("\t%s: %s", cmd_param_name, gumstix_answer.param);
 			}

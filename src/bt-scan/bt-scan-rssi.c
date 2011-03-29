@@ -69,6 +69,9 @@ void setBackground(){
 void changeDetection(){
 	int i,j;
 	char imageName[255];
+	Configuration temp_config;
+
+	temp_config = copyConfiguration();
 
 	printf("Change detection...\n");
 	// Get the foreground
@@ -113,7 +116,7 @@ void changeDetection(){
 
 			);
 
-			CV_IMAGE_ELEM(imgBinary, unsigned char, i, j) = (color_dist > config.color_threshold) ? 255 : 0;
+			CV_IMAGE_ELEM(imgBinary, unsigned char, i, j) = (color_dist > temp_config.color_threshold) ? 255 : 0;
 		}
 
 
@@ -145,7 +148,7 @@ void changeDetection(){
 		cvDrawContours(imgDifference, ptr, color, CV_RGB(0,0,0), -1, 2, 8, cvPoint(0,0));
 	}
 
-	sprintf(imageName, "../data/images/%s.jpeg", config.id_gumstix);
+	sprintf(imageName, "../data/images/%s.jpeg", temp_config.id_gumstix);
 	pthread_mutex_lock(&images_sem);
 	cvSaveImage(imageName, imgDifference, NULL);
 	pthread_mutex_unlock(&images_sem);
@@ -296,26 +299,31 @@ void* executeInquire(void * args){
 			// Set new preferred resolution
 			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, temp_config.image_width);
 			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, temp_config.image_height);
-			printf("Setting new background image (%dx%d) ...\n", temp_config.image_width, temp_config.image_height);
+			printf("Setting new background image (%dx%d) ...\n", (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH),
+																 (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT));
 			setBackground();
 		}
 
+		// Send inquiry data if there is some bt device and auto_send_inquiry or force_send_inquiry is true
 		if((temp_config.auto_send_inquiry || force_send_inquiry) && inq_data.num_devices > 0){
 			printf("Sending inquiry data to server ...\n");
 			sendInquiryData(sd, &servaddr_inquiry, inq_data);
 			force_send_inquiry = 0;
 		}
 
-		if(inq_data.num_devices > temp_config.alarm_threshold){
+		// Send image if auto_send_images and alarm is triggered, or if force_send_image is true
+		if((temp_config.auto_send_images && inq_data.num_devices >= temp_config.alarm_threshold) || force_send_image){
+			changeDetection();
+			sprintf(imageName, "../data/images/%s.jpeg", temp_config.id_gumstix);
+			sendImage(imageName);
+			force_send_image = 0;
+		}
+
+		// Send alarm
+		if(inq_data.num_devices >= temp_config.alarm_threshold){
 			printf("Sending alarm to server ...\n");
 			sprintf(numDev, "%d", inq_data.num_devices);
 			sendCommand(sd, &servaddr_service, ALARM, numDev);
-			changeDetection();
-			sprintf(imageName, "../data/images/%s.jpeg", temp_config.id_gumstix);
-			if(temp_config.auto_send_images || force_send_image){
-				sendImage(imageName);
-				force_send_image = 0;
-			}
 		}
 
 		sleep(temp_config.scan_interval * 1000);
