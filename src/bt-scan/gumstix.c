@@ -149,6 +149,8 @@ int main(int argc, char** argv) {
 	if (!initParameter(argc, argv))
 		return 1;
 
+	printConfiguration();
+
 	// Setting server addresses and sockets
 	memset((char *)&servaddr_console, 0, sizeof(struct sockaddr_in));
 	memset((char *)&servaddr_service, 0, sizeof(struct sockaddr_in));
