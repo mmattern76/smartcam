@@ -69,7 +69,7 @@ int initParameter(int argc, char** argv) {
 
 	// Default configuration
 	strcpy(config.id_gumstix, "Gumstix");
-	config.alarm_threshold = 10;
+	config.alarm_threshold = 3;
 	config.scan_length = 8;
 	config.scan_interval = 0;
 	config.auto_send_inquiry = true;
@@ -141,7 +141,7 @@ int initParameter(int argc, char** argv) {
 int main(int argc, char** argv) {
 
 	Command command, answer;
-	int width, height, scan_interval, scan_length;
+	int width, height, scan_interval, scan_length, alarm_threshold, color_threshold;
 	char *buf;
 	struct hostent *host;
 	int result;
@@ -256,6 +256,18 @@ int main(int argc, char** argv) {
 			sprintf(answer.param, "%d", config.scan_length);
 			break;
 
+		case GET_ALARM_THRESHOLD:
+			printf("Received GET_ALARM_THRESHOLD from server\n");
+			answer.id_command = PARAM_VALUE;
+			sprintf(answer.param, "%d", config.alarm_threshold);
+			break;
+
+		case GET_COLOR_THRESHOLD:
+			printf("Received GET_COLOR_THRESHOLD from server\n");
+			answer.id_command = PARAM_VALUE;
+			sprintf(answer.param, "%d", config.color_threshold);
+			break;
+
 		/************************ SET ************************/
 		case SET_AUTO_SEND_INQUIRY:
 			printf("Received SET_AUTO_SEND_INQUIRY (value: %s) from server\n", command.param);
@@ -336,12 +348,36 @@ int main(int argc, char** argv) {
 			printf("Received SET_SCAN_LENGTH (value: %s) from server\n", command.param);
 			answer.id_command = PARAM_ACK;
 			scan_length = atoi(command.param);
-			if(scan_length < 0 || scan_length > 10)
-				scan_length = 0; // default
+			if(scan_length < 1 || scan_length > 10)
+				scan_length = 8; // default
 			pthread_mutex_lock(&config_sem);
 			config.scan_length = scan_length;
 			pthread_mutex_lock(&config_sem);
 			printf("SET_SCAN_LENGTH: %d\n", config.scan_length);
+			break;
+
+		case SET_ALARM_THRESHOLD:
+			printf("Received SET_ALARM_THRESHOLD (value: %s) from server\n", command.param);
+			answer.id_command = PARAM_ACK;
+			alarm_threshold = atoi(command.param);
+			if(alarm_threshold < 1 || alarm_threshold > 100)
+				alarm_threshold = 3; // default
+			pthread_mutex_lock(&config_sem);
+			config.alarm_threshold = alarm_threshold;
+			pthread_mutex_lock(&config_sem);
+			printf("SET_ALARM_THRESHOLD: %d\n", config.alarm_threshold);
+			break;
+
+		case SET_COLOR_THRESHOLD:
+			printf("Received SET_COLOR_THRESHOLD (value: %s) from server\n", command.param);
+			answer.id_command = PARAM_ACK;
+			color_threshold = atoi(command.param);
+			if(color_threshold < 1 || color_threshold > 100)
+				color_threshold = 40; // default
+			pthread_mutex_lock(&config_sem);
+			config.color_threshold = color_threshold;
+			pthread_mutex_lock(&config_sem);
+			printf("SET_COLOR_THRESHOLD: %d\n", config.color_threshold);
 			break;
 
 		default:
