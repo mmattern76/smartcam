@@ -280,7 +280,7 @@ int main(int argc, char** argv) {
 			}else{
 				config.auto_send_inquiry = true; // default
 			}
-			pthread_mutex_lock(&config_sem);
+			pthread_mutex_unlock(&config_sem);
 			printf("SET_AUTO_SEND_INQUIRY: %s\n", config.auto_send_inquiry ? "true" : "false");
 			break;
 
@@ -293,7 +293,7 @@ int main(int argc, char** argv) {
 			}else{
 				config.auto_send_images = true; // default
 			}
-			pthread_mutex_lock(&config_sem);
+			pthread_mutex_unlock(&config_sem);
 			printf("SET_AUTO_SEND_IMAGES: %s\n", config.auto_send_images ? "true" : "false");
 			break;
 
@@ -330,7 +330,7 @@ int main(int argc, char** argv) {
 			pthread_mutex_lock(&config_sem);
 			config.image_width = width;
 			config.image_height = height;
-			pthread_mutex_lock(&config_sem);
+			pthread_mutex_unlock(&config_sem);
 			printf("SET_IMAGE_RESOLUTION: %dx%d\n", config.image_width, config.image_height);
 			break;
 
@@ -342,7 +342,7 @@ int main(int argc, char** argv) {
 				scan_interval = 0; // default
 			pthread_mutex_lock(&config_sem);
 			config.scan_interval = scan_interval;
-			pthread_mutex_lock(&config_sem);
+			pthread_mutex_unlock(&config_sem);
 			printf("SET_SCAN_INTERVAL: %d\n", config.scan_interval);
 			break;
 
@@ -354,7 +354,7 @@ int main(int argc, char** argv) {
 				scan_length = 8; // default
 			pthread_mutex_lock(&config_sem);
 			config.scan_length = scan_length;
-			pthread_mutex_lock(&config_sem);
+			pthread_mutex_unlock(&config_sem);
 			printf("SET_SCAN_LENGTH: %d\n", config.scan_length);
 			break;
 
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
 				alarm_threshold = 3; // default
 			pthread_mutex_lock(&config_sem);
 			config.alarm_threshold = alarm_threshold;
-			pthread_mutex_lock(&config_sem);
+			pthread_mutex_unlock(&config_sem);
 			printf("SET_ALARM_THRESHOLD: %d\n", config.alarm_threshold);
 			break;
 
@@ -378,7 +378,7 @@ int main(int argc, char** argv) {
 				color_threshold = 40; // default
 			pthread_mutex_lock(&config_sem);
 			config.color_threshold = color_threshold;
-			pthread_mutex_lock(&config_sem);
+			pthread_mutex_unlock(&config_sem);
 			printf("SET_COLOR_THRESHOLD: %d\n", config.color_threshold);
 			break;
 
