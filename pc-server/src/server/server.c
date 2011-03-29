@@ -339,6 +339,9 @@ enum cmd_id getCommandIdForParameter(char* param_name, int is_set) {
     else if (!strcasecmp(param_name, "scan_length")) {
         return is_set ?  SET_SCAN_LENGTH : GET_SCAN_LENGTH;
     }
+	else if (!strcasecmp(param_name, "scan_interval")) {
+        return is_set ?  SET_SCAN_INTERVAL : GET_SCAN_INTERVAL;
+    }
     else if (!strcasecmp(param_name, "image")) {
         return is_set ?  ERROR : GET_IMAGE;
     }
@@ -434,6 +437,7 @@ void* consoleThread(void* arg){
 			printf("\t\t\t\tINQUIRY (get only) - get last bluetooth inquiry data from gumstix\n");
 			printf("\t\t\t\tAUTO_SEND_INQUIRY (get/set) - auto send inquiries\n");
 			printf("\t\t\t\tAUTO_SEND_IMAGES (get/set) - auto send images\n");
+			printf("\t\t\t\tSCAN_INTERVAL (get/set) - seconds between two bluetooth scans\n");
 			printf("\t\t\t\tSCAN_LENGTH (get/set) - bluetooth scan lenght (value * 1,26)\n\n");
 			printf("\t\texit - exit program\n\n");	
 			printf("\t\thelp - prints this help\n\n");	
@@ -479,21 +483,29 @@ void* consoleThread(void* arg){
                 continue;
             }
             
+			// Send Command to target
             printf("\tSending command to %s\n", target->id_gumstix);
             sendCommand(sConsole, &target->addr, command_id, "");
             
-            if (command_id != GET_IMAGE) {
-                gumstix_answer = receiveCommand(sConsole, &target->addr);
-				if (gumstix_answer.id_command != PARAM_VALUE) {
-					printf("\tError while getting parameter: %s\n", cmd_param_name);
-				}else {
-					printf("\t%s: %s", cmd_param_name, gumstix_answer.param);
-				}
+			// Receive Answer from target
+            gumstix_answer = receiveCommand(sConsole, NULL); // Not overwrite gumstix address
+			if (gumstix_answer.id_command != PARAM_VALUE) {
+				printf("\tError while getting parameter: %s\n", cmd_param_name);
 			}else {
-				printf("\tReceiving image ...\n");
+				printf("\t%s: %s", cmd_param_name, gumstix_answer.param);
 			}
-
-            continue;
+			
+			if (command_id == GET_IMAGE) {
+                printf("\tReceiving image ...\n");
+				continue;
+			}
+			
+			if (command_id == GET_INQUIRY) { // Show local last inquiry
+				printDevices(target->lastInquiry);
+				continue;
+			}
+				
+			continue;
         }
 		/*********************************************/
         
@@ -515,6 +527,7 @@ void* consoleThread(void* arg){
                 continue;
             }
             
+			// Send Command to target
             printf("\tSending command to %s\n", target->id_gumstix);
             sendCommand(sConsole, &target->addr, command_id, cmd_param_value);
             
