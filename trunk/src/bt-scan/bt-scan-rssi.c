@@ -61,7 +61,7 @@ void printConfiguration(){
 	printf("SCAN INTERVAL: %d (seconds)\n", temp.scan_interval);
 	printf("AUTO SEND INQUIRY: %s\n", temp.auto_send_inquiry ? "true" : "false");
 	printf("AUTO SEND IMAGES: %s\n", temp.auto_send_images ? "true" : "false");
-	printf("COLOR THRESHOLD: %s\n", temp.color_threshold);
+	printf("COLOR THRESHOLD: %d\n", temp.color_threshold);
 	printf("IMAGE RESOLUTION: %dx%d\n", temp.image_width, temp.image_height);
 	printf("********************************\n");
 }
@@ -314,10 +314,10 @@ void* executeInquire(void * args){
 		if(inq_data.num_devices == 0){
 			//changeDetection();
 			// Set new preferred resolution
-			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, temp_config.image_width);
-			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, temp_config.image_height);
-			printf("Setting new background image (%dx%d) ...\n", (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH),
-																 (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT));
+//			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, temp_config.image_width);
+//			cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, temp_config.image_height);
+//			printf("Setting new background image (%dx%d) ...\n", (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH),
+//																 (int)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT));
 			setBackground();
 		}
 

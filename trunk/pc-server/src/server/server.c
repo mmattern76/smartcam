@@ -497,7 +497,7 @@ void* consoleThread(void* arg){
 				printf("\tError while getting parameter: %s\n", cmd_param_name);
 				continue;
 			}else {
-				printf("\t%s: %s", cmd_param_name, gumstix_answer.param);
+				printf("\t%s: %s\n", cmd_param_name, gumstix_answer.param);
 			}
 			
 			if (command_id == GET_IMAGE) {
