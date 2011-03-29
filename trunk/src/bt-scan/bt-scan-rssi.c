@@ -49,6 +49,23 @@ Configuration copyConfiguration(){
 	return temp;
 }
 
+void printConfiguration(){
+	Configuration temp;
+	printf("********************************\n");
+	printf("Gumstix Configuration\n");
+	printf("********************************\n");
+	temp = copyConfiguration();
+	printf("ID: %s\n", temp.id_gumstix);
+	printf("ALARM THRESHOLD: %d\n", temp.alarm_threshold);
+	printf("SCAN LENGHT: %d\n", temp.scan_length);
+	printf("SCAN INTERVAL: %d (seconds)\n", temp.scan_interval);
+	printf("AUTO SEND INQUIRY: %s\n", temp.auto_send_inquiry ? "true" : "false");
+	printf("AUTO SEND IMAGES: %s\n", temp.auto_send_images ? "true" : "false");
+	printf("COLOR THRESHOLD: %s\n", temp.color_threshold);
+	printf("IMAGE RESOLUTION: %dx%d\n", temp.image_width, temp.image_height);
+	printf("********************************\n");
+}
+
 void setBackground(){
 	printf("Shooting for background ...\n");
 	// Get the background

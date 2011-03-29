@@ -3,6 +3,7 @@
 #include <struct.h>
 
 Configuration copyConfiguration();
+void printConfiguration();
 void * executeInquire(void * args);
 
 #endif
