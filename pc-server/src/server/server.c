@@ -329,7 +329,7 @@ enum cmd_id getCommandIdForParameter(char* param_name, int is_set) {
         return is_set ? SET_AUTO_SEND_IMAGES : GET_AUTO_SEND_IMAGES;
     }
     else if (!strcasecmp(param_name, "image_resolution")) {
-            return is_set ? SET_IMAGE_RESOLUTION : GET_IMAGE_RESOLUTION;
+            return is_set ? ERROR : GET_IMAGE_RESOLUTION;
     }
     else if (!strcasecmp(param_name, "scan_length")) {
         return is_set ?  SET_SCAN_LENGTH : GET_SCAN_LENGTH;
@@ -438,7 +438,7 @@ void* consoleThread(void* arg){
 			printf("\t\t\t\tINQUIRY (get only) - get last bluetooth inquiry data from gumstix\n");
 			printf("\t\t\t\tAUTO_SEND_INQUIRY (get/set) - auto send inquiries (true/false)\n");
 			printf("\t\t\t\tAUTO_SEND_IMAGES (get/set) - auto send images (true/false)\n");
-			printf("\t\t\t\tIMAGE_RESOLUTION (get/set) - image resolution (es: 640x480)\n");
+			printf("\t\t\t\tIMAGE_RESOLUTION (get only) - image resolution (es: 640x480)\n");
 			printf("\t\t\t\tSCAN_INTERVAL (get/set) - seconds between two bluetooth scans (0-100)\n");
 			printf("\t\t\t\tSCAN_LENGTH (get/set) - bluetooth scan lenght (value * 1,26) (1-10)\n");
 			printf("\t\t\t\tALARM_THRESHOLD (get/set) - min number of bluetooth devices to trigger the alarm (1-100)\n");

@@ -65,6 +65,7 @@ int sendImage(char* fileName){
 int initParameter(int argc, char** argv) {
 
 	int c, missingS = true, missingN = true;
+	char *buf, resolution[15];
 	opterr = 0;
 
 	// Default configuration
@@ -81,7 +82,7 @@ int initParameter(int argc, char** argv) {
 	force_send_inquiry = false;
 
 	// i parametri seguiti da : richiedono un argomento obbligatorio
-	while ((c = getopt(argc, argv, "hn:a:l:s:")) != -1)
+	while ((c = getopt(argc, argv, "hn:a:l:s:r:")) != -1)
 		switch (c) {
 		case 'n':
 			strcpy(config.id_gumstix, optarg);
@@ -97,6 +98,35 @@ int initParameter(int argc, char** argv) {
 			strcpy(config.server_ip, optarg); // questo deve essere obbligatorio
 			missingS = false;
 			break;
+		case 'r':
+			strcpy(resolution, optarg);
+			buf = strtok(resolution, "x");
+			config.image_width = atoi(buf);
+			buf = strtok(NULL, "x");
+			config.image_height = atoi(buf);
+			if(config.image_width >= 0 && config.image_width <= 320){
+				config.image_width = 320;
+				config.image_height = 240;
+			}else if(config.image_width > 320 && config.image_width <= 640){
+				config.image_width = 640;
+				config.image_height = 480;
+			}else if(config.image_width > 640 && config.image_width <= 1024){
+				config.image_width = 1024;
+				config.image_height = 768;
+			}else if(config.image_width > 1024 && config.image_width <= 1280){
+				config.image_width = 1280;
+				config.image_height = 1024;
+			}else if(config.image_width > 1280 && config.image_width <= 1600){
+				config.image_width = 1600;
+				config.image_height = 1200;
+			}else if(config.image_width > 1600 && config.image_width <= 2048){
+				config.image_width = 2048;
+				config.image_height = 1536;
+			}else{ // default
+				config.image_width = 640;
+				config.image_height = 480;
+			}
+			break;
 		case 'h':
 			printf("Gumstix help\n");
 			printf("Parameters:\n");
@@ -104,7 +134,8 @@ int initParameter(int argc, char** argv) {
 			printf("-n: set gumstix identifier\n");
 			printf("-l: set inquiry length\n");
 			printf("-a: set alarm threshold\n");
-			printf(".h: print this help\n");
+			printf("-r: set image resolution (es: 640x480)\n");
+			printf("-h: print this help\n");
 			return 0;
 			break;
 		case '?':
@@ -297,42 +328,42 @@ int main(int argc, char** argv) {
 			printf("SET_AUTO_SEND_IMAGES: %s\n", config.auto_send_images ? "true" : "false");
 			break;
 
-		case SET_IMAGE_RESOLUTION:
-			printf("Received SET_IMAGE_RESOLUTION (value: %s) from server\n", command.param);
-			answer.id_command = PARAM_ACK;
-			// Normalizing resolution
-			buf = strtok(command.param, "x");
-			width = atoi(buf);
-			buf = strtok(NULL, "x");
-			height = atoi(buf);
-			if(width >= 0 && width <= 320){
-				width = 320;
-				height = 240;
-			}else if(width > 320 && width <= 640){
-				width = 640;
-				height = 480;
-			}else if(width > 640 && width <= 1024){
-				width = 1024;
-				height = 768;
-			}else if(width > 1024 && width <= 1280){
-				width = 1280;
-				height = 1024;
-			}else if(width > 1280 && width <= 1600){
-				width = 1600;
-				height = 1200;
-			}else if(width > 1600 && width <= 2048){
-				width = 2048;
-				height = 1536;
-			}else{ // default
-				width = 640;
-				height = 480;
-			}
-			pthread_mutex_lock(&config_sem);
-			config.image_width = width;
-			config.image_height = height;
-			pthread_mutex_unlock(&config_sem);
-			printf("SET_IMAGE_RESOLUTION: %dx%d\n", config.image_width, config.image_height);
-			break;
+//		case SET_IMAGE_RESOLUTION:
+//			printf("Received SET_IMAGE_RESOLUTION (value: %s) from server\n", command.param);
+//			answer.id_command = PARAM_ACK;
+//			// Normalizing resolution
+//			buf = strtok(command.param, "x");
+//			width = atoi(buf);
+//			buf = strtok(NULL, "x");
+//			height = atoi(buf);
+//			if(width >= 0 && width <= 320){
+//				width = 320;
+//				height = 240;
+//			}else if(width > 320 && width <= 640){
+//				width = 640;
+//				height = 480;
+//			}else if(width > 640 && width <= 1024){
+//				width = 1024;
+//				height = 768;
+//			}else if(width > 1024 && width <= 1280){
+//				width = 1280;
+//				height = 1024;
+//			}else if(width > 1280 && width <= 1600){
+//				width = 1600;
+//				height = 1200;
+//			}else if(width > 1600 && width <= 2048){
+//				width = 2048;
+//				height = 1536;
+//			}else{ // default
+//				width = 640;
+//				height = 480;
+//			}
+//			pthread_mutex_lock(&config_sem);
+//			config.image_width = width;
+//			config.image_height = height;
+//			pthread_mutex_unlock(&config_sem);
+//			printf("SET_IMAGE_RESOLUTION: %dx%d\n", config.image_width, config.image_height);
+//			break;
 
 		case SET_SCAN_INTERVAL:
 			printf("Received SET_SCAN_INTERVAL (value: %s) from server\n", command.param);
