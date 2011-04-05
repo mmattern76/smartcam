@@ -84,7 +84,7 @@ void setBackground(){
 }
 
 void changeDetection(){
-	int i,j;
+	int i,j,compression[3];
 	char imageName[255];
 	Configuration temp_config;
 
@@ -166,8 +166,11 @@ void changeDetection(){
 	}
 
 	sprintf(imageName, "../data/images/%s.jpeg", temp_config.id_gumstix);
+	compression[0] = CV_IMWRITE_JPEG_QUALITY;
+	compression[1] = 50;
+	compression[2] = 0;
 	pthread_mutex_lock(&images_sem);
-	cvSaveImage(imageName, imgDifference, NULL);
+	cvSaveImage(imageName, imgDifference, compression);
 	pthread_mutex_unlock(&images_sem);
 
 	cvReleaseImage(&imgBinary);
@@ -215,7 +218,7 @@ void* executeInquire(void * args){
 	inquiry_info *ii;
 	Inquiry_data temp;
 	char numDev[5], imageName[255];
-	int i, dev_id, sock, flags, num_rsp;
+	int i, dev_id, sock, flags, num_rsp = 0;
 	char name[NAME_LEN] = { 0 };
 	uint16_t handle;
 	unsigned int ptype;
@@ -261,7 +264,11 @@ void* executeInquire(void * args){
 		printf("Scanning ...\n");
 
 		num_rsp = hci_inquiry(dev_id, temp_config.scan_length, MAX_RISP, NULL, &ii, flags);
-		if( num_rsp < 0 ) perror("hci_inquiry");
+		if( num_rsp < 0 ){
+			//perror("hci_inquiry");
+			sleep(3);
+			continue;
+		}
 
 		for (i = 0; i < num_rsp && i < MAX_RISP; i++) {
 			//ba2str(&(ii+i)->bdaddr, dev_addr[i]);
@@ -296,6 +303,10 @@ void* executeInquire(void * args){
 				continue;
 			}
 
+			usleep(10000);
+			hci_disconnect(sock, htobs(cr->conn_info->handle),
+					HCI_OE_USER_ENDED_CONNECTION, 10000);
+
 			//printf("\t%d %s\t%s\t%d\n", i+1, addr, name, rssi);
 			temp.devices[i].valid = true;
 			temp.devices[i].rssi = rssi;
@@ -311,7 +322,7 @@ void* executeInquire(void * args){
 		inq_data = temp;
 
 		// If nobody is near the camera, update background
-		if(inq_data.num_devices == 0){
+		if(temp.num_devices == 0){
 			//changeDetection();
 			setBackground();
 		}
@@ -338,7 +349,7 @@ void* executeInquire(void * args){
 			sendCommand(sd, &servaddr_service, ALARM, numDev);
 		}
 
-		sleep(temp_config.scan_interval);
+		sleep(temp_config.scan_interval > 3 ? temp_config.scan_interval : 3);
 	}
 
 	free(ii);
