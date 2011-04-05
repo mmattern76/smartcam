@@ -172,10 +172,12 @@ int initParameter(int argc, char** argv) {
 int main(int argc, char** argv) {
 
 	Command command, answer;
-	int width, height, scan_interval, scan_length, alarm_threshold, color_threshold;
-	char *buf;
+	int scan_interval, scan_length, alarm_threshold, color_threshold;
 	struct hostent *host;
 	int result;
+
+	// Print to stdout every 1024 chars or \n
+	setvbuf(stdout, NULL, _IOLBF, 1024);
 
 	if (!initParameter(argc, argv))
 		return 1;
