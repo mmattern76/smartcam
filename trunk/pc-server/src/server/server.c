@@ -251,7 +251,6 @@ void* imagesThread(void* arg){
 
 		// close connection
 		close(conn_sd);
-        sprintf(buf, "%s.jpeg", temp->id_gumstix);
 	}
 
 	close(listen_sd);
