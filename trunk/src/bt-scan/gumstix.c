@@ -16,7 +16,7 @@ extern Inquiry_data inq_data;
 extern Configuration config;
 
 pthread_t btscan_thread, alive_thread;
-pthread_mutex_t config_sem, images_sem;
+pthread_mutex_t config_sem;
 struct sockaddr_in servaddr_console, servaddr_service, servaddr_inquiry, servaddr_images;
 int sd;
 
@@ -226,7 +226,6 @@ int main(int argc, char** argv) {
 
 	// Initialize semaphores
 	pthread_mutex_init(&config_sem, NULL);
-	pthread_mutex_init(&images_sem, NULL);
 
 	// Create alive thread
 	pthread_create(&alive_thread, NULL, alive, NULL);
