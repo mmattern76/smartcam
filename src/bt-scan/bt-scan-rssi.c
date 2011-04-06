@@ -27,7 +27,7 @@
 
 Inquiry_data inq_data;
 Configuration config;
-extern pthread_mutex_t config_sem, images_sem;
+extern pthread_mutex_t config_sem;
 extern int sd, force_send_inquiry, force_send_image;
 extern struct sockaddr_in servaddr_service, servaddr_inquiry;
 
@@ -169,9 +169,8 @@ void changeDetection(){
 	compression[0] = CV_IMWRITE_JPEG_QUALITY;
 	compression[1] = 50;
 	compression[2] = 0;
-	pthread_mutex_lock(&images_sem);
+
 	cvSaveImage(imageName, imgDifference, compression);
-	pthread_mutex_unlock(&images_sem);
 
 	cvReleaseImage(&imgBinary);
 	cvReleaseImage(&imgResult);
