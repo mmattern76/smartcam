@@ -18,7 +18,7 @@
 #define true 1
 #define false 0
 #define MAX_GUMSTIX 10
-#define CONSOLE_SOCKET_TIMEOUT 5
+#define CONSOLE_SOCKET_TIMEOUT 15
 #define LOG_FILE_NAME "log.txt"
 
 pthread_mutex_t log_sem;
